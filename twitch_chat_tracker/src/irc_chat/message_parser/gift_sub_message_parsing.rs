@@ -51,8 +51,22 @@ impl MessageParser<'_> {
       });
     };
 
+    let Some(gift_amount) = self.message.gift_sub_count() else {
+      return Err(AppError::MissingExpectedValue {
+        expected_value_name: "gift sub count",
+        location: "gift sub parsing",
+      });
+    };
+    let Ok(gift_amount) = gift_amount.trim().parse::<f32>() else {
+      return Err(AppError::FailedToParseValue {
+        value_name: "gift sub count",
+        location: "gift sub parsing",
+        value: gift_amount.to_string(),
+      });
+    };
+
     if donation_event::Model::gift_sub_origin_id_already_exists(origin_id, database_connection)
-      .await?
+      .await? && gift_amount == 1.0
     {
       return Ok(None);
     }
@@ -79,19 +93,6 @@ impl MessageParser<'_> {
       return Err(AppError::MissingExpectedValue {
         expected_value_name: "subscription plan",
         location: "gift sub parsing",
-      });
-    };
-    let Some(gift_amount) = self.message.gift_sub_count() else {
-      return Err(AppError::MissingExpectedValue {
-        expected_value_name: "gift sub count",
-        location: "gift sub parsing",
-      });
-    };
-    let Ok(gift_amount) = gift_amount.trim().parse::<f32>() else {
-      return Err(AppError::FailedToParseValue {
-        value_name: "gift sub count",
-        location: "gift sub parsing",
-        value: gift_amount.to_string(),
       });
     };
 

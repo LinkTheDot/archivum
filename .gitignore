@@ -15,4 +15,5 @@ temp_*
 ingress*
 *env.production
 */spanix-user-messages
-*/failed_spanix_messages.dat
+*.txt
+spanix_scrubber/failed_spanix_messages

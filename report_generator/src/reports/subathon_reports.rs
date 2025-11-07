@@ -4,8 +4,8 @@ use crate::conditions::query_conditions_builder::AppQueryConditionsBuilder;
 use crate::errors::AppError;
 use crate::report_builders::tables::{
   chat_messages::get_messages_sent_ranking,
-  donation_rankings::get_donation_rankings_for_streamer_and_date, raids::get_raids_table,
-  timeouts::get_timeouts_table, top_emotes::get_top_n_emotes_table,
+  donation_rankings::get_donation_rankings_for_streamer_and_date, timeouts::get_timeouts_table,
+  top_emotes::get_top_n_emotes_table,
 };
 use crate::report_builders::templates::subathon_statistics::SubathonStatistics;
 use crate::report_builders::templates::{
@@ -97,7 +97,6 @@ async fn get_baseline_reports(
   let rendered_subathon_statistics = template_renderer.render("subathon_stats")?;
   let top_emotes_table =
     get_top_n_emotes_table(subathon_conditions, database_connection, Some(15)).await?;
-  let raids = get_raids_table(subathon_conditions, database_connection).await?;
   let timeouts = get_timeouts_table(subathon_conditions, database_connection).await?;
 
   tracing::info!("Building report strings.");
@@ -105,7 +104,6 @@ async fn get_baseline_reports(
   let general_stats_report = Report::build_report_from_list(
     "subathon_general_stats",
     &[
-      &raids,
       &timeouts,
       &top_emotes_table,
       &rendered_chat_statistics,
@@ -116,7 +114,6 @@ async fn get_baseline_reports(
   let general_stats_report_with_donations = Report::build_report_from_list(
     "subathon_general_stats_with_donations",
     &[
-      &raids,
       &timeouts,
       &top_emotes_table,
       &rendered_chat_statistics,

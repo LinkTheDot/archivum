@@ -26,6 +26,10 @@ pub async fn get_timeouts_table(
   }
 
   if !banned_users_string.is_empty() {
+    if !timedout_users_string.is_empty() {
+      timeout_table_string.push('\n')
+    }
+
     timeout_table_string.push_str(&format!("{BANS_HEADER}\n{banned_users_string}\n"));
   }
 

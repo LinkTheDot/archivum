@@ -6,8 +6,8 @@ use sqlx::types::chrono::{TimeZone, Utc};
 
 const POINTS_PER_BIT: f64 = 0.01;
 const POINTS_PER_TIER_1_SUB: f64 = 5.0;
-const POINTS_PER_TIER_2_SUB: f64 = 8.0;
-const POINTS_PER_TIER_3_SUB: f64 = 20.0;
+const POINTS_PER_TIER_2_SUB: f64 = 10.0;
+const POINTS_PER_TIER_3_SUB: f64 = 25.0;
 const POINTS_PER_DOLLAR: f64 = 1.0;
 
 #[derive(Debug, Default, serde::Serialize)]
@@ -27,6 +27,8 @@ pub struct SubathonResponse {
 pub async fn get_subathon_data(
   State(interface_config): State<InterfaceConfig>,
 ) -> Result<axum::Json<SubathonResponse>, AppError> {
+  tracing::info!("Got a subathon request.");
+
   let database_connection = interface_config.database_connection();
   let chrono::offset::LocalResult::Single(subathon_start_result) =
     Utc.with_ymd_and_hms(2025, 10, 15, 0, 0, 0)
@@ -37,6 +39,7 @@ pub async fn get_subathon_data(
   };
   let mut all_donations = donation_event::Entity::find()
     .filter(donation_event::Column::Timestamp.gte(subathon_start_result))
+    .filter(donation_event::Column::DonationReceiverTwitchUserId.eq(1))
     .select_only()
     .column(donation_event::Column::EventType)
     .column(donation_event::Column::SubscriptionTier)
@@ -48,6 +51,7 @@ pub async fn get_subathon_data(
     .await?;
   let subscriptions = subscription_event::Entity::find()
     .filter(subscription_event::Column::Timestamp.gte(subathon_start_result))
+    .filter(subscription_event::Column::ChannelId.eq(1))
     .select_only()
     .column(subscription_event::Column::SubscriptionTier)
     .into_model::<StrippedSubscriptionEvent>()
@@ -112,8 +116,11 @@ pub async fn get_subathon_data(
     subathon_response.total_points += points;
   }
 
-  subathon_response.direct_donations = subathon_response.direct_donations.floor();
-  subathon_response.total_points = subathon_response.total_points.floor();
+  let rounded_donations = round_to_100ths(subathon_response.direct_donations);
+  let rounded_points = subathon_response.total_points.round();
+
+  subathon_response.direct_donations = rounded_donations;
+  subathon_response.total_points = rounded_points;
 
   Ok(axum::Json(subathon_response))
 }
@@ -138,4 +145,8 @@ impl From<StrippedSubscriptionEvent> for DonationSum {
       subscription_tier: Some(value.subscription_tier),
     }
   }
+}
+
+fn round_to_100ths(number: f64) -> f64 {
+  (number * 100.0).round() / 100.0
 }
