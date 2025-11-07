@@ -1,5 +1,5 @@
 = Donation Statistics =
-Donations: £{{ chat_stats.raw_donations }}
+Donations: £{{ chat_stats.raw_donations | round(precision=2) }}
 Bits: {{ chat_stats.bits }}
 
 {%- set total_tier_1 = chat_stats.tier_1_subs + chat_stats.tier_1_gift_subs %}

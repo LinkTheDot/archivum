@@ -53,9 +53,9 @@ impl RouteBuilder for axum::Router<InterfaceConfig> {
         "/donations/",
         get(crate::routes::donations::donation_event::get_donations),
       )
-      .route(
-        "/subathon",
-        get(crate::routes::donations::subathon_data::get_subathon_data),
-      )
+    // .route(
+    //   "/subathon",
+    //   get(crate::routes::donations::subathon_data::get_subathon_data),
+    // )
   }
 }
