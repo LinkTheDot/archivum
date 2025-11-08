@@ -14,7 +14,8 @@ If you're the owner of a channel, or have moderator permissions, `bits:read` and
 would be recommended for accuracy.
 
 Next you'll want to make sure there's a running instance of MySql for the app to access.
-This can be running on the hardware, through Docker, in a Kubernetes cluster, etc.
+This can be running on the hardware, through Docker, in a Kubernetes cluster, or any other way you might
+run a Rust binary.
 
 # Creating the Config
 Once you have your access and client token, you'll want to create the config file. 
@@ -42,7 +43,7 @@ Most values (including secrets) can use the environment to define them instead.
 The available list of environment variables is as such:
 
 `TWITCH_ACCESS_TOKEN`, `TWITCH_CLIENT_ID`, `DATABASE_USERNAME`, `DATABASE_HOST_ADDRESS`,
-`DATABASE_PASSWORD`, `DATABASE_PASSWORD`, and `PASTEBIN_API_KEY` 
+`DATABASE_PASSWORD`, and `PASTEBIN_API_KEY` 
 
 # Running
 Once you've setup the config and MySql, you can run the tracker in one of three ways.
