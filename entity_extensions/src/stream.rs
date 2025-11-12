@@ -2,9 +2,9 @@ use crate::errors::EntityExtensionError;
 use app_config::AppConfig;
 use app_config::secret_string::Secret;
 use chrono::{DateTime, Utc};
-use entities::{stream, twitch_user};
+use entities::{muted_vod_segment, stream, twitch_user};
 use reqwest::RequestBuilder;
-use sea_orm::*;
+use sea_orm::{sea_query::OnConflict, *};
 use serde_json::Value;
 use std::collections::HashMap;
 use url::Url;
@@ -28,6 +28,14 @@ pub trait StreamExtensions {
   ) -> Result<HashMap<String, (DateTime<Utc>, String)>, EntityExtensionError>
   where
     I: IntoIterator<Item = &'a twitch_user::Model>;
+  async fn insert_muted_segments<I, M>(
+    &self,
+    database_connection: &DatabaseConnection,
+    muted_vod_segments: I,
+  ) -> Result<(), DbErr>
+  where
+    I: IntoIterator<Item = M>,
+    M: Into<muted_vod_segment::ActiveModel>;
 }
 
 impl StreamExtensions for stream::Model {
@@ -139,6 +147,49 @@ impl StreamExtensions for stream::Model {
     }
 
     Ok(live_channels)
+  }
+
+  async fn insert_muted_segments<I, M>(
+    &self,
+    database_connection: &DatabaseConnection,
+    muted_vod_segments: I,
+  ) -> Result<(), DbErr>
+  where
+    I: IntoIterator<Item = M>,
+    M: Into<muted_vod_segment::ActiveModel>,
+  {
+    let muted_vod_segments: Vec<muted_vod_segment::ActiveModel> = muted_vod_segments
+      .into_iter()
+      .map(|muted_vod_segment| {
+        let mut muted_vod_segment: muted_vod_segment::ActiveModel = muted_vod_segment.into();
+
+        muted_vod_segment.stream_id = Set(self.id);
+
+        muted_vod_segment
+      })
+      .collect();
+
+    if muted_vod_segments.is_empty() {
+      return Ok(());
+    }
+
+    tracing::info!("{muted_vod_segments:?}");
+
+    let potentional_conflicting_columns = [
+          muted_vod_segment::Column::StreamId,
+          muted_vod_segment::Column::Offset,
+    ];
+
+    let _insert_result = muted_vod_segment::Entity::insert_many(muted_vod_segments)
+      .on_conflict(
+        OnConflict::columns(potentional_conflicting_columns)
+        .do_nothing_on(potentional_conflicting_columns)
+        .to_owned(),
+      )
+      .exec(database_connection)
+      .await?;
+
+    Ok(())
   }
 }
 

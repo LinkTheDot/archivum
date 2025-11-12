@@ -214,9 +214,9 @@ impl TwitchUserExtensions for twitch_user::Model {
   async fn query_helix_for_channels_from_list<S: AsRef<str>>(
     channels: &[ChannelIdentifier<S>],
   ) -> Result<Vec<twitch_user::ActiveModel>, EntityExtensionError> {
-    // if channels.is_empty() || cfg!(feature = "__test_hook") || cfg!(test) {
-    //   return Ok(vec![]);
-    // }
+    if channels.is_empty() || cfg!(feature = "__test_hook") || cfg!(test) {
+      return Ok(vec![]);
+    }
 
     let mut query_url = Url::parse(HELIX_USER_QUERY_URL)?;
     let reqwest_client = reqwest::Client::new();

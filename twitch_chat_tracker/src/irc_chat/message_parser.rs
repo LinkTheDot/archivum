@@ -7,7 +7,6 @@ use sea_orm::*;
 
 mod bits_message_parsing;
 mod gift_sub_message_parsing;
-mod live_status_message_parsing;
 mod raid_message_parsing;
 mod stream_message_parsing;
 pub mod streamlabs_donation;

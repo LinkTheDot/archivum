@@ -57,8 +57,8 @@ impl SpanixScrubberConfig {
         }
       };
 
-      let future = tokio::spawn(async {
-        Self::write_all_messages_to_user_file(login_name, user_messages).await
+      let future = tokio::spawn(async move {
+        Self::write_all_messages_to_user_file(login_name, twitch_id, user_messages).await
       });
 
       message_processing_futures.push(future);
@@ -172,9 +172,13 @@ impl SpanixScrubberConfig {
   }
 
   /// Takes the list of raw IRC messages for a user and writes them to a file.
-  async fn write_all_messages_to_user_file(user_login: String, messages: Vec<String>) {
+  async fn write_all_messages_to_user_file(
+    user_login: String,
+    user_twitch_id: i32,
+    messages: Vec<String>,
+  ) {
     let mut user_file_path = std::path::PathBuf::from(Self::DATA_OUTPUT_DIRECTORY);
-    user_file_path.push(&user_login);
+    user_file_path.push(user_twitch_id.to_string());
 
     let open_user_file_result = fs::OpenOptions::new()
       .create(true)

@@ -15,6 +15,8 @@ pub struct StreamQuery {
   maybe_login: Option<String>,
   user_id: Option<String>,
 
+  // stream_id: Option<String>,
+
   #[serde(flatten)]
   pagination_parameters: PaginationParameters,
 }

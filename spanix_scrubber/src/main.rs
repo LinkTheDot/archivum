@@ -5,8 +5,6 @@ use spanix_scrubber::config::SpanixScrubberConfig;
 async fn main() {
   twitch_chat_tracker::logging::setup_logging_config().unwrap();
 
-  spanix_scrubber::temp::run().await;
-
   let args = ClapArgs::new();
   let scrubber = SpanixScrubberConfig::new(&args.streamer_name).await;
 

@@ -1,5 +1,5 @@
-use super::MessageParser;
 use crate::errors::AppError;
+use crate::websocket_connection::message_parser::WebsocketMessageParser;
 use crate::websocket_connection::twitch_objects::stream_status::{
   StreamUpdateEventType, TwitchStreamUpdateMessage,
 };
@@ -7,7 +7,7 @@ use entities::*;
 use entity_extensions::prelude::*;
 use sea_orm::*;
 
-impl MessageParser<'_> {
+impl WebsocketMessageParser {
   /// Takes a [`JsonValue`](serde_json::Value) constructed from Twitch's Websocket connection for `stream.online` and `stream.offline` events.
   pub async fn parse_websocket_stream_status_update_message(
     message: JsonValue,
@@ -29,7 +29,7 @@ impl MessageParser<'_> {
 
     match stream_update_message.get_subscription_event_type() {
       StreamUpdateEventType::Online => {
-        Self::stream_update_online(stream_update_message, database_connection)
+        let _stream_model = Self::stream_update_online(stream_update_message, database_connection)
           .await?
           .insert(database_connection)
           .await?;
@@ -142,24 +142,28 @@ mod tests {
         ),
         end_timestamp: None,
         twitch_user_id: 1,
+        title: None,
+        twitch_vod_id: None,
       }]])
       .into_connection();
 
     let expected_online_active_model = stream::ActiveModel {
-      id: ActiveValue::NotSet,
+      id: NotSet,
       twitch_stream_id: Set(19136881),
       start_timestamp: Set(Some(
         DateTime::parse_from_rfc3339("2025-05-08T00:02:29.532137847Z")
           .unwrap()
           .to_utc(),
       )),
-      end_timestamp: ActiveValue::NotSet,
+      end_timestamp: NotSet,
       twitch_user_id: Set(1),
+      title: NotSet,
+      twitch_vod_id: NotSet,
     };
     let expected_offline_active_model = stream::ActiveModel {
-      id: ActiveValue::Unchanged(1),
-      twitch_stream_id: ActiveValue::Unchanged(1),
-      start_timestamp: ActiveValue::Unchanged(Some(
+      id: Unchanged(1),
+      twitch_stream_id: Unchanged(1),
+      start_timestamp: Unchanged(Some(
         DateTime::parse_from_rfc3339("2025-05-08T00:02:29.532137847Z")
           .unwrap()
           .to_utc(),
@@ -169,14 +173,17 @@ mod tests {
           .unwrap()
           .to_utc(),
       )),
-      twitch_user_id: ActiveValue::Unchanged(1),
+      twitch_user_id: Unchanged(1),
+      title: Unchanged(None),
+      twitch_vod_id: Unchanged(None),
     };
 
-    let online_active_model = MessageParser::stream_update_online(online_message, &mock_database)
-      .await
-      .unwrap();
+    let online_active_model =
+      WebsocketMessageParser::stream_update_online(online_message, &mock_database)
+        .await
+        .unwrap();
     let offline_active_model =
-      MessageParser::stream_update_offline(offline_message, &mock_database)
+      WebsocketMessageParser::stream_update_offline(offline_message, &mock_database)
         .await
         .unwrap();
 

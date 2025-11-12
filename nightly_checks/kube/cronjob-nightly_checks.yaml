@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: update-twitch-name-changes
+  name: nightly_checks
   namespace: default
 spec:
   schedule: "0 23 * * *"
@@ -15,8 +15,8 @@ spec:
       template:
         spec:
           containers:
-          - name: update-twitch-name-changes
-            image: homelab.local:5000/build_and_push_update_names:latest
+          - name: nightly_checks
+            image: homelab.local:5000/nightly_checks:latest
             imagePullPolicy: Always
             env:
               - name: TWITCH_ACCESS_TOKEN
