@@ -63,15 +63,16 @@ async fn run_migration(database: &DatabaseConnection) -> anyhow::Result<()> {
 
   Migrator::up(database, None).await?;
 
+  // Ensure that all expected tables exist before attempting to finish the migration.
   let check_tables = [
     "donation_event",
     "emote",
     "emote_usage",
     "gift_sub_recipient",
+    "muted_vod_segments",
     "raid",
     "stream",
     "stream_message",
-    "stream_name",
     "subscription_event",
     "twitch_user",
     "twitch_user_name_change",
