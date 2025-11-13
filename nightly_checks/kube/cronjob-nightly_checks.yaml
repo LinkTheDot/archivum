@@ -30,7 +30,7 @@ spec:
                     name: twitch-chat-logger
                     key: twitchClientId
               - name: CONFIG_PATH
-                value: "/config/deploy_config.yml"
+                value: "/config_files/deploy_config.yml"
               - name: DATABASE_HOST_ADDRESS
                 value: "mysql"
           restartPolicy: Never
