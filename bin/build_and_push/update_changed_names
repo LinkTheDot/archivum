@@ -1,5 +1,0 @@
-#!/usr/bin/env zsh
-
-docker build --progress=plain -t $HOMELAB_ADDRESS:5000/build_and_push_update_names:latest -f update_changed_names/Dockerfile .;
-
-docker push $HOMELAB_ADDRESS:5000/build_and_push_update_names:latest 

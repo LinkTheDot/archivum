@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use app_config::secret_string::Secret;
 use app_config::AppConfig;
+use entities::donation_event;
 use migration::{Migrator, MigratorTrait, SchemaManager};
 pub use sea_orm::DatabaseConnection;
 use sea_orm::*;
@@ -65,20 +66,20 @@ async fn run_migration(database: &DatabaseConnection) -> anyhow::Result<()> {
 
   // Ensure that all expected tables exist before attempting to finish the migration.
   let check_tables = [
-    "donation_event",
-    "emote",
-    "emote_usage",
-    "gift_sub_recipient",
-    "muted_vod_segments",
-    "raid",
-    "stream",
-    "stream_message",
-    "subscription_event",
-    "twitch_user",
-    "twitch_user_name_change",
-    "twitch_user_unknown_user_association",
-    "unknown_user",
-    "user_timeout",
+    entities::donation_event::Entity.table_name(),
+    entities::emote::Entity.table_name(),
+    entities::emote_usage::Entity.table_name(),
+    entities::gift_sub_recipient::Entity.table_name(),
+    entities::muted_vod_segment::Entity.table_name(),
+    entities::raid::Entity.table_name(),
+    entities::stream::Entity.table_name(),
+    entities::stream_message::Entity.table_name(),
+    entities::subscription_event::Entity.table_name(),
+    entities::twitch_user::Entity.table_name(),
+    entities::twitch_user_name_change::Entity.table_name(),
+    entities::twitch_user_unknown_user_association::Entity.table_name(),
+    entities::unknown_user::Entity.table_name(),
+    entities::user_timeout::Entity.table_name(),
   ];
 
   for table_name in check_tables {

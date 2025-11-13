@@ -1,12 +1,12 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: nightly_checks
+  name: nightly-checks
   namespace: default
 spec:
   schedule: "0 23 * * *"
   startingDeadlineSeconds: 600
-  successfulJobsHistoryLimit: 0
+  successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
@@ -15,7 +15,7 @@ spec:
       template:
         spec:
           containers:
-          - name: nightly_checks
+          - name: nightly-checks
             image: homelab.local:5000/nightly_checks:latest
             imagePullPolicy: Always
             env:
