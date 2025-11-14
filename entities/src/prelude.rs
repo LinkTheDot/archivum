@@ -4,6 +4,7 @@ pub use super::donation_event::Entity as DonationEvent;
 pub use super::emote::Entity as Emote;
 pub use super::emote_usage::Entity as EmoteUsage;
 pub use super::gift_sub_recipient::Entity as GiftSubRecipient;
+pub use super::muted_vod_segment::Entity as MutedVodSegment;
 pub use super::raid::Entity as Raid;
 pub use super::stream::Entity as Stream;
 pub use super::stream_message::Entity as StreamMessage;

@@ -13,12 +13,17 @@ pub struct Model {
   pub start_timestamp: Option<DateTimeUtc>,
   pub end_timestamp: Option<DateTimeUtc>,
   pub twitch_user_id: i32,
+  #[sea_orm(column_type = "Text", nullable)]
+  pub twitch_vod_id: Option<String>,
+  pub title: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
   #[sea_orm(has_many = "super::donation_event::Entity")]
   DonationEvent,
+  #[sea_orm(has_many = "super::muted_vod_segment::Entity")]
+  MutedVodSegment,
   #[sea_orm(has_many = "super::raid::Entity")]
   Raid,
   #[sea_orm(has_many = "super::stream_message::Entity")]
@@ -42,6 +47,12 @@ pub enum Relation {
 impl Related<super::donation_event::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::DonationEvent.def()
+  }
+}
+
+impl Related<super::muted_vod_segment::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::MutedVodSegment.def()
   }
 }
 

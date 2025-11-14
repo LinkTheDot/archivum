@@ -5,6 +5,7 @@ import { QueryFormData } from "../types/QueryFormData";
 import { Stream, Streams } from "../types/Streams";
 import { Column, ResponsiveDataDisplay } from "./ResponsiveDataDisplay";
 import { formatDate } from '../services/FormatDate';
+import MutedVodTable from "./MutedVodTableButton";
 
 export interface StreamsResultsProps {
   queryResults: QueryFormData;
@@ -36,6 +37,7 @@ export function StreamsResults(props: StreamsResultsProps) {
 
   const followingColumns: Column<Stream>[] = [
     { header_name: 'Stream ID', header_value_key: 'twitch_stream_id' },
+    { header_name: 'Vod ID', header_value_key: 'twitch_vod_id' },
     {
       header_name: 'Start Time',
       render: (item) => (
@@ -52,7 +54,37 @@ export function StreamsResults(props: StreamsResultsProps) {
         </span>
       )
     },
-  ];
+    {
+      header_name: 'Is Muted',
+      render: (item) => {
+        if (item.twitch_vod_id === null) {
+          return null;
+        }
+        return (
+          <span className={item.muted_vod_segments.length === 0 ? "text-green-400" : "text-red-400"}>
+            {
+              item.muted_vod_segments.length === 0
+                ? "Not Muted"
+                : <MutedVodTable muted_vod_segments={item.muted_vod_segments} />
+            }
+          </span>
+        );
+      }
+    },
+    {
+      header_name: 'Title',
+      render: (item) => {
+        if (!item.title) {
+          return null;
+        }
+        return (
+          <div className="max-w-xs truncate" title={item.title}>
+            {item.title}
+          </div>
+        );
+      }
+    }
+  ]
 
   if (error) {
     return (

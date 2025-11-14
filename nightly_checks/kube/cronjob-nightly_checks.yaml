@@ -1,12 +1,12 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: update-twitch-name-changes
+  name: nightly-checks
   namespace: default
 spec:
   schedule: "0 23 * * *"
   startingDeadlineSeconds: 600
-  successfulJobsHistoryLimit: 0
+  successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
@@ -15,8 +15,8 @@ spec:
       template:
         spec:
           containers:
-          - name: update-twitch-name-changes
-            image: homelab.local:5000/build_and_push_update_names:latest
+          - name: nightly-checks
+            image: homelab.local:5000/nightly_checks:latest
             imagePullPolicy: Always
             env:
               - name: TWITCH_ACCESS_TOKEN
@@ -30,7 +30,7 @@ spec:
                     name: twitch-chat-logger
                     key: twitchClientId
               - name: CONFIG_PATH
-                value: "/config/deploy_config.yml"
+                value: "/config_files/deploy_config.yml"
               - name: DATABASE_HOST_ADDRESS
                 value: "mysql"
           restartPolicy: Never

@@ -7,7 +7,7 @@ members = [
   "entities", 
   "entity_extensions",
   "migration", 
-  "update_changed_names",
+  "nightly_checks",
   "backend", 
   "spanix_scrubber", 
 ]

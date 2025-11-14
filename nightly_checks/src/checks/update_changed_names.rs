@@ -1,4 +1,5 @@
 use crate::rate_limiter::RateLimiter;
+use anyhow::anyhow;
 use database_connection::get_database_connection;
 use entities::{twitch_user, twitch_user_name_change};
 use entity_extensions::{prelude::TwitchUserExtensions, twitch_user::ChannelIdentifier};
@@ -16,7 +17,7 @@ pub struct DatabaseNameUpdateConfig<'a> {
 }
 
 impl DatabaseNameUpdateConfig<'_> {
-  pub async fn new(max_requests_per_minute: usize, chunk_limit: usize) -> Result<Self, DbErr> {
+  pub async fn new(max_requests_per_minute: usize, chunk_limit: usize) -> anyhow::Result<Self> {
     let database_connection = get_database_connection().await;
     let all_users = twitch_user::Entity::find().all(database_connection).await?;
     let rate_limiter = RateLimiter::new(max_requests_per_minute);
@@ -41,16 +42,12 @@ impl DatabaseNameUpdateConfig<'_> {
   }
 
   pub async fn run(mut self) {
-    println!("Total batch count: {}", self.total_batches);
+    tracing::info!("Total batch count: {}", self.total_batches);
 
     let user_list: Vec<&twitch_user::Model> = self.user_list_by_twitch_ids.values().collect();
 
     for (batch_number, user_batch) in user_list.chunks(self.chunk_limit).enumerate() {
-      if batch_number < 22 {
-        continue;
-      }
-
-      println!(
+      tracing::info!(
         "Processing batch number {}. Current tokens: {}",
         batch_number,
         self.rate_limiter.tokens()
@@ -61,7 +58,7 @@ impl DatabaseNameUpdateConfig<'_> {
         .collect();
 
       if let Some(refresh_wait_time) = self.rate_limiter.request_tokens(self.chunk_limit) {
-        println!(
+        tracing::info!(
           "Rate limit reached. Waiting for next refresh in {}.",
           refresh_wait_time.to_human_time_string()
         );
@@ -77,9 +74,11 @@ impl DatabaseNameUpdateConfig<'_> {
       let mut update_channel_list = match channel_list_query_result {
         Ok(channel_list) => channel_list,
         Err(error) => {
-          println!(
+          tracing::error!(
             "Failed to process batch number {}/{}. Reason: {}",
-            batch_number, self.total_batches, error
+            batch_number,
+            self.total_batches,
+            error
           );
 
           continue;
@@ -89,9 +88,13 @@ impl DatabaseNameUpdateConfig<'_> {
       self.remove_unchanged_names(&mut update_channel_list);
 
       for channel in update_channel_list {
-        self
+        let result = self
           .update_channel_and_insert_name_change(channel, batch_number)
           .await;
+
+        if let Err(error) = result {
+          tracing::error!("Failed to update a channel's name change. Reason: `{error}`");
+        }
       }
     }
   }
@@ -100,12 +103,12 @@ impl DatabaseNameUpdateConfig<'_> {
   fn remove_unchanged_names(&self, batch: &mut Vec<twitch_user::ActiveModel>) {
     batch.retain(|channel| {
       let Some(login_name) = channel.login_name.try_as_ref() else {
-        println!("Channel {:?} is missing a login name", channel.id);
+        tracing::error!("Channel {:?} is missing a login name", channel.id);
 
         return false;
       };
       let Some(display_name) = channel.display_name.try_as_ref() else {
-        println!("Channel {:?} is missing a display name", channel.id);
+        tracing::error!("Channel {:?} is missing a display name", channel.id);
 
         return false;
       };
@@ -123,34 +126,35 @@ impl DatabaseNameUpdateConfig<'_> {
     &self,
     mut channel_name_change: twitch_user::ActiveModel,
     current_batch_number: usize,
-  ) {
+  ) -> anyhow::Result<()> {
     let Some(channel_twitch_id) = channel_name_change.twitch_id.try_as_ref() else {
-      println!("Missing twitch id: {:?}", channel_name_change);
-      return;
+      return Err(anyhow!("Missing twitch id: {:?}", channel_name_change));
     };
     let Some(new_login_name) = channel_name_change.login_name.try_as_ref().cloned() else {
-      println!("Missing login name: {:?}", channel_name_change);
-      return;
+      return Err(anyhow!("Missing login name: {:?}", channel_name_change));
     };
     let Some(new_display_name) = channel_name_change.display_name.try_as_ref().cloned() else {
-      println!("Missing display name: {:?}", channel_name_change);
-      return;
+      return Err(anyhow!("Missing display name: {:?}", channel_name_change));
     };
     let Some(corresponding_channel) = self.user_list_by_twitch_ids.get(channel_twitch_id) else {
-      println!("Missing channel from user list: {:?}", channel_name_change);
-      return;
+      return Err(anyhow!(
+        "Missing channel from user list: {:?}",
+        channel_name_change
+      ));
     };
 
     channel_name_change.id = Set(corresponding_channel.id);
     channel_name_change.twitch_id = Unchanged(corresponding_channel.twitch_id);
 
-    println!("Updating: {:?}", channel_name_change);
+    tracing::info!("Updating: {:?}", channel_name_change);
 
     match channel_name_change.update(self.database_connection).await {
       Ok(insert_result) => {
-        println!(
+        tracing::info!(
           "An item from batch {}/{} has been inserted. Result: {:?}",
-          current_batch_number, self.total_batches, insert_result
+          current_batch_number,
+          self.total_batches,
+          insert_result
         );
 
         let name_change = twitch_user_name_change::ActiveModel {
@@ -163,16 +167,21 @@ impl DatabaseNameUpdateConfig<'_> {
         };
 
         if let Err(error) = name_change.insert(self.database_connection).await {
-          println!(
+          Err(anyhow!(
             "Failed to create a name change object for channel id {:?}. Reason: {:?}",
-            corresponding_channel.id, error
-          );
+            corresponding_channel.id,
+            error
+          ))
+        } else {
+          Ok(())
         }
       }
-      Err(error) => println!(
+      Err(error) => Err(anyhow!(
         "Failed to insert batch {}/{}. Reason: {}",
-        current_batch_number, self.total_batches, error
-      ),
+        current_batch_number,
+        self.total_batches,
+        error
+      )),
     }
   }
 }

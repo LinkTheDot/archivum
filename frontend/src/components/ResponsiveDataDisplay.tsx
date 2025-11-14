@@ -2,7 +2,7 @@ export interface Column<T> {
   header_name: string;
   header_value_key?: keyof T;
   render?: (item: T) => React.ReactNode;
-  mobileLabel?: string; // Optional shorter label for mobile
+  mobileLabel?: string;
 }
 
 export interface ResponsiveDataDisplayProps<T> {
@@ -20,6 +20,13 @@ export function ResponsiveDataDisplay<T>({
 }: ResponsiveDataDisplayProps<T>) {
   console.log("Got to ResponsiveDataDisplay");
 
+  const renderValue = (value: React.ReactNode) => {
+    if (value === null || value === undefined) {
+      return <span className="text-gray-500">Unknown</span>;
+    }
+    return value;
+  };
+
   if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
@@ -30,7 +37,6 @@ export function ResponsiveDataDisplay<T>({
 
   return (
     <>
-      {/* Mobile: Card Layout */}
       <div className="md:hidden space-y-4">
         {data.map((item) => {
           const rowKeyValue = typeof rowKey === 'function' ? rowKey(item) : item[rowKey] as string | number;
@@ -43,7 +49,7 @@ export function ResponsiveDataDisplay<T>({
                     {column.mobileLabel || column.header_name}
                   </span>
                   <span className="text-sm text-gray-300">
-                    {column.render ? column.render(item) : (column.header_value_key ? item[column.header_value_key] as React.ReactNode : '')}
+                    {renderValue(column.render ? column.render(item) : (column.header_value_key ? item[column.header_value_key] as React.ReactNode : ''))}
                   </span>
                 </div>
               ))}
@@ -52,7 +58,6 @@ export function ResponsiveDataDisplay<T>({
         })}
       </div>
 
-      {/* Tablet: Grid Layout */}
       <div className="hidden md:grid lg:hidden grid-cols-1 gap-4">
         {data.map((item) => {
           const rowKeyValue = typeof rowKey === 'function' ? rowKey(item) : item[rowKey] as string | number;
@@ -66,7 +71,7 @@ export function ResponsiveDataDisplay<T>({
                       {column.header_name}
                     </p>
                     <p className="text-sm text-gray-300">
-                      {column.render ? column.render(item) : (column.header_value_key ? item[column.header_value_key] as React.ReactNode : '')}
+                      {renderValue(column.render ? column.render(item) : (column.header_value_key ? item[column.header_value_key] as React.ReactNode : ''))}
                     </p>
                   </div>
                 ))}
@@ -76,7 +81,6 @@ export function ResponsiveDataDisplay<T>({
         })}
       </div>
 
-      {/* Desktop: Table Layout */}
       <div className="hidden lg:block bg-gray-900 rounded-xl shadow-2xl border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -97,7 +101,7 @@ export function ResponsiveDataDisplay<T>({
                   <tr key={rowKeyValue} className="hover:bg-gray-800/50 transition-colors">
                     {columns.map((column, colIndex) => (
                       <td key={`${rowKeyValue}-${column.header_name || colIndex}`} className="px-6 py-4 text-sm text-gray-300">
-                        {column.render ? column.render(item) : (column.header_value_key ? item[column.header_value_key] as React.ReactNode : '')}
+                        {renderValue(column.render ? column.render(item) : (column.header_value_key ? item[column.header_value_key] as React.ReactNode : ''))}
                       </td>
                     ))}
                   </tr>

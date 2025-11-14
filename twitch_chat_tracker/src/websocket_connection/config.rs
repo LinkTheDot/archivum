@@ -1,6 +1,9 @@
 use crate::{
-  channel::tracked_channels::TrackedChannels, errors::AppError,
-  irc_chat::message_parser::MessageParser, websocket_connection::subscriptions::EventSubscription,
+  channel::tracked_channels::TrackedChannels,
+  errors::AppError,
+  websocket_connection::{
+    message_parser::WebsocketMessageParser, subscriptions::EventSubscription,
+  },
 };
 use app_config::{secret_string::Secret, AppConfig};
 use database_connection::get_database_connection;
@@ -302,7 +305,7 @@ impl TwitchWebsocketConfig {
       return Ok(true);
     }
 
-    MessageParser::parse_websocket_stream_status_update_message(
+    WebsocketMessageParser::parse_websocket_stream_status_update_message(
       message,
       get_database_connection().await,
     )

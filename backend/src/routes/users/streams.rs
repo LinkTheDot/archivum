@@ -44,7 +44,10 @@ pub async fn get_streams(
     number_of_pages,
   } = paginated_streams.num_items_and_pages().await?;
 
-  let stream_response = StreamDto::response_from_stream_list(&user, fetched_paginated_streams);
+  let mut stream_response =
+    StreamDto::response_from_stream_list(&user, fetched_paginated_streams, database_connection)
+      .await?;
+  stream_response.streams.sort_by(|lhs, rhs| rhs.id.cmp(&lhs.id));
 
   Ok(axum::Json(PaginatedResponse {
     data: stream_response,
