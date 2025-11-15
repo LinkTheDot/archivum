@@ -12,6 +12,19 @@ import { QueryFormData } from './types/QueryFormData';
 import { Pagination } from './types/Pagination';
 import { MessageResults } from './components/UserMessageResults';
 import { StreamsResults } from './components/StreamsResults';
+import { DonationsResults } from './components/DonationsResults'
+import { RaidsResults } from './components/RaidsResults';
+
+const CATEGORY_COMPONENTS = {
+  [CategoryState.Users]: UserResults,
+  [CategoryState.NameChanges]: NameChangeResults,
+  [CategoryState.Subscriptions]: SubscriptionResults,
+  [CategoryState.Following]: FollowingResults,
+  [CategoryState.Messages]: MessageResults,
+  [CategoryState.Streams]: StreamsResults,
+  [CategoryState.Raids]: RaidsResults,
+  [CategoryState.Donations]: DonationsResults,
+} as const;
 
 export default function App() {
   const [queryFormData, setQueryForm] = useState<QueryFormData>({
@@ -44,6 +57,8 @@ export default function App() {
     setPagination(null);
     setQueryForm(data);
   };
+
+  const ResultComponent = CATEGORY_COMPONENTS[queryFormData.category];
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -81,53 +96,8 @@ export default function App() {
         )}
 
         <main className="mx-auto">
-          {queryFormData.category == CategoryState.Users && (
-            <UserResults
-              queryResults={queryFormData}
-              pagination={pagination}
-              updatePagination={updatePagination}
-              setIsLoading={updateIsLoading}
-            />
-          )}
-
-          {queryFormData.category == CategoryState.NameChanges && (
-            <NameChangeResults
-              queryResults={queryFormData}
-              pagination={pagination}
-              updatePagination={updatePagination}
-              setIsLoading={updateIsLoading}
-            />
-          )}
-
-          {queryFormData.category == CategoryState.Subscriptions && (
-            <SubscriptionResults
-              queryResults={queryFormData}
-              pagination={pagination}
-              updatePagination={updatePagination}
-              setIsLoading={updateIsLoading}
-            />
-          )}
-
-          {queryFormData.category == CategoryState.Following && (
-            <FollowingResults
-              queryResults={queryFormData}
-              pagination={pagination}
-              updatePagination={updatePagination}
-              setIsLoading={updateIsLoading}
-            />
-          )}
-
-          {queryFormData.category == CategoryState.Messages && (
-            <MessageResults
-              queryResults={queryFormData}
-              pagination={pagination}
-              updatePagination={updatePagination}
-              setIsLoading={updateIsLoading}
-            />
-          )}
-
-          {queryFormData.category == CategoryState.Streams && (
-            <StreamsResults
+          {ResultComponent && (
+            <ResultComponent
               queryResults={queryFormData}
               pagination={pagination}
               updatePagination={updatePagination}
