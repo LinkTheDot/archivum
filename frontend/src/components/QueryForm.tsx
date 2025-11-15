@@ -39,13 +39,23 @@ const QueryForm: React.FC<QueryFormProps> = ({ onSubmitQuery }) => {
   };
 
   const isMessagesCategory = formData.category === "Messages";
-  const isChannelCategory = [CategoryState.Subscriptions, CategoryState.Messages].includes(formData.category);
+  const isChannelCategory = [
+    CategoryState.Subscriptions,
+    CategoryState.Messages,
+    CategoryState.Raids,
+    CategoryState.Donations
+  ].includes(formData.category);
+  const userIsOptional = [
+    CategoryState.Subscriptions,
+    CategoryState.Raids,
+    CategoryState.Donations,
+  ].includes(formData.category);
 
   return (
     <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl p-6 shadow-2xl border border-gray-800">
       <div className="hidden md:flex gap-2 mb-2">
         <label htmlFor="username" className="flex-1 text-sm font-medium text-gray-400">
-          Username / Twitch ID
+          {userIsOptional ? "Username / Twitch ID (Optional)" : "Username / Twitch ID"}
         </label>
         {isChannelCategory && (
           <label htmlFor="channel" className="flex-1 text-sm font-medium text-gray-400">
@@ -65,7 +75,7 @@ const QueryForm: React.FC<QueryFormProps> = ({ onSubmitQuery }) => {
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1">
           <label htmlFor="username" className="block md:hidden text-sm font-medium text-gray-400 mb-2">
-            Username / Twitch ID
+            {userIsOptional ? "Username / Twitch ID (Optional)" : "Username / Twitch ID"}
           </label>
           <input
             id="username"
