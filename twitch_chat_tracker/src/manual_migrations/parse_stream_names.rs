@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use tokio::fs;
 use twitch_chat_tracker::errors::AppError;
 
+#[allow(dead_code)]
 /// Parses a file of format "stream_id\tstream_name" where \t is tab.
 pub async fn parse_stream_names_from_file(file_path: &str) -> ! {
   if let Err(error) = run(file_path).await {

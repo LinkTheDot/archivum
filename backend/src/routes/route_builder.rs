@@ -33,6 +33,7 @@ impl RouteBuilder for axum::Router<InterfaceConfig> {
         "/users/streams",
         get(crate::routes::users::streams::get_streams),
       )
+      .route("/users/raids", get(crate::routes::users::raids::get_raids))
   }
 
   fn apply_donation_routes(self) -> Self {
@@ -46,11 +47,11 @@ impl RouteBuilder for axum::Router<InterfaceConfig> {
         get(crate::routes::donations::subscriptions::get_subscriptions),
       )
       .route(
-        "/{channel}/donations/",
+        "/{channel}/donations",
         get(crate::routes::donations::donation_event::get_donations),
       )
       .route(
-        "/donations/",
+        "/donations",
         get(crate::routes::donations::donation_event::get_donations),
       )
     // .route(

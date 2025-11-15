@@ -2,6 +2,7 @@ use crate::app::InterfaceConfig;
 use crate::data_transfer_objects::stream_message::StreamMessageDto;
 use crate::error::*;
 use crate::response_models::{paginated_parameters::*, paginatied_response::*};
+use crate::routes::helpers::get_channel::get_channel;
 use crate::routes::helpers::get_users::GetUsers;
 use axum::extract::{Path, Query, State};
 use entities::*;
@@ -94,22 +95,6 @@ fn get_user_messages_query(
   }
 
   message_query
-}
-
-async fn get_channel(
-  channel_login: String,
-  database_connection: &DatabaseConnection,
-) -> Result<twitch_user::Model, AppError> {
-  let get_channel_query =
-    twitch_user::Entity::find().filter(twitch_user::Column::LoginName.contains(&channel_login));
-
-  if let Some(channel) = get_channel_query.one(database_connection).await? {
-    Ok(channel)
-  } else {
-    Err(AppError::CouldNotFindUserByLoginName {
-      login: channel_login,
-    })
-  }
 }
 
 impl GetUsers for UserMessagesQuery {

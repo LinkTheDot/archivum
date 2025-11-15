@@ -5,5 +5,6 @@ export enum CategoryState {
   Following = "Following",
   Messages = "Messages",
   Streams = "Streams",
-  // Donations = "Donations",
+  Raids = "Raids",
+  Donations = "Donations",
 }

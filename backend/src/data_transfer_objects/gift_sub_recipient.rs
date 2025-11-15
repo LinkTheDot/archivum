@@ -3,6 +3,8 @@ use crate::error::AppError;
 use entities::*;
 use sea_orm::*;
 
+const INCLUDE_GIFT_SUB_RECIPIENT: bool = true;
+
 #[derive(Debug, serde::Serialize)]
 pub struct GiftSubRecipientDto {
   pub id: i32,
@@ -26,8 +28,12 @@ impl GiftSubRecipientDto {
         donation_event_id: gift_sub_recipient.donation_event_id,
       });
     };
-    let donation_event_dto =
-      DonationEventDto::from_donation_event(donation_event, database_connection).await?;
+    let donation_event_dto = DonationEventDto::from_donation_event(
+      donation_event,
+      INCLUDE_GIFT_SUB_RECIPIENT,
+      database_connection,
+    )
+    .await?;
 
     Ok(Self {
       id: gift_sub_recipient.id,
@@ -95,8 +101,12 @@ impl GiftSubRecipientDto {
         );
         continue;
       };
-      let donation_event_dto =
-        DonationEventDto::from_donation_event(related_donation_event, database_connection).await?;
+      let donation_event_dto = DonationEventDto::from_donation_event(
+        related_donation_event,
+        INCLUDE_GIFT_SUB_RECIPIENT,
+        database_connection,
+      )
+      .await?;
 
       let recipient = GiftSubRecipientDto {
         id: recipient.id,

@@ -23,6 +23,7 @@ pub struct DonationEventDto {
 impl DonationEventDto {
   pub async fn from_donation_event(
     donation_event: donation_event::Model,
+    include_gift_sub_recipients: bool,
     database_connection: &DatabaseConnection,
   ) -> Result<Self, AppError> {
     let Some(donation_receiver) =
@@ -37,8 +38,11 @@ impl DonationEventDto {
     let donator = Self::get_donator(&donation_event, database_connection).await?;
     let unknown_user = Self::get_unknown_user(&donation_event, database_connection).await?;
     let stream = Self::get_stream_dto(&donation_event, database_connection).await?;
-    let gift_sub_recipients =
-      Self::get_gift_sub_recipients(&donation_event, database_connection).await?;
+    let gift_sub_recipients = if include_gift_sub_recipients {
+      Self::get_gift_sub_recipients(&donation_event, database_connection).await?
+    } else {
+      None
+    };
 
     Ok(Self {
       id: donation_event.id,
@@ -57,13 +61,18 @@ impl DonationEventDto {
 
   pub async fn from_donation_event_list(
     donation_event_list: Vec<donation_event::Model>,
+    include_gift_sub_recipients: bool,
     database_connection: &DatabaseConnection,
   ) -> Result<Vec<Self>, AppError> {
     let mut donation_event_dto_list = vec![];
 
     for donation_event in donation_event_list {
-      let donation_event_dto =
-        Self::from_donation_event(donation_event, database_connection).await?;
+      let donation_event_dto = Self::from_donation_event(
+        donation_event,
+        include_gift_sub_recipients,
+        database_connection,
+      )
+      .await?;
 
       donation_event_dto_list.push(donation_event_dto);
     }
