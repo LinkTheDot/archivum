@@ -1,21 +1,25 @@
-Archivum is an app focused on building a data warehouse for the site Twitch.tv.
-When configured it will track the chats of given channels and store all messages, 
-donations, livestreams, bans and more to a central database.
+Archivum is a full-stack app focused on building a data warehouse for the site Twitch.tv.
+When configured it will track the chats of given channels in real time and store all messages, 
+donations, livestreams, bans and more to a central database and provide an API and
+website for accessing this data.
 
 The current limit of channels that can be tracked right now is 5, but this will
 be expanded in future updates.
 
 # Setup
-First you need to start by generating Twitch access and clien tokens with the right 
+First you need to start by generating Twitch access and client tokens with the right 
 permissions. I suggest using [`swiftyspiffy's website for this`](https://twitchtokengenerator.com/).
 
 As an individual the only permission you'll need is `chat:read`.
 If you're the owner of a channel, or have moderator permissions, `bits:read` and `channel:read:subscriptions`
 would be recommended for accuracy.
 
-Next you'll want to make sure there's a running instance of MySql for the app to access.
+# The Database
+Currently the only supported database back-end is Mysql. So you'll need to ensure there's a running instance
+of MySql for the app(s) to access.
+
 This can be running on the hardware, through Docker, in a Kubernetes cluster, or any other way you might
-run a Rust binary.
+configure the app to access it.
 
 # Creating the Config
 Once you have your access and client token, you'll want to create the config file. 
