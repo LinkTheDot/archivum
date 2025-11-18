@@ -65,7 +65,7 @@ export default function App() {
       <div className="container mx-auto px-4 py-8 lg:px-8 xl:px-12 2xl:px-16">
         <header className="mb-12 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Twitch Chat Tracker
+            Twitch Archive
           </h1>
           <p className="text-gray-400 text-lg">Search and analyze Twitch user data</p>
         </header>

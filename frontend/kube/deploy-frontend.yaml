@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: twitch-logger-frontend
+  name: archivum-frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: twitch-logger-frontend
+      app: archivum-frontend
   template:
     metadata:
       labels:
-        app: twitch-logger-frontend
+        app: archivum-frontend
     spec:
       containers:
-        - name: twitch-logger-frontend
-          image: homelab.local:5000/twitch-logger-frontend
+        - name: archivum-frontend
+          image: homelab.local:5000/archivum-frontend
           imagePullPolicy: Always
           ports:
           - containerPort: 80

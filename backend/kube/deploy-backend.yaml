@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: twitch-logger-query-interface-backend
+  name: archivum-backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: twitch-logger-query-interface-backend
+      app: archivum-backend
   template:
     metadata:
       labels:
-        app: twitch-logger-query-interface-backend
+        app: archivum-backend
     spec:
       containers:
-        - name: twitch-logger-query-interface-backend
-          image: homelab.local:5000/twitch-logger-query-interface-backend:latest
+        - name: archivum-backend
+          image: homelab.local:5000/archivum-backend:latest
           imagePullPolicy: Always
           env:
             - name: CONFIG_PATH
