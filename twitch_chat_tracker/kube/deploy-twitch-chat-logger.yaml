@@ -1,36 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: twitch-chat-logger
+  name: archivum-twitch-tracker
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: twitch-chat-logger
+      app: archivum-twitch-tracker
   template:
     metadata:
       labels:
-        app: twitch-chat-logger
+        app: archivum-twitch-tracker
     spec:
       containers:
-        - name: twitch-chat-logger
-          image: homelab.local:5000/twitch-chat-logger:latest
+        - name: archivum-twitch-tracker
+          image: homelab.local:5000/archivum-twitch-tracker:latest
           imagePullPolicy: Always
           env:
             - name: TWITCH_ACCESS_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: twitch-chat-logger
+                  name: archivum
                   key: twitchAccessToken
             - name: TWITCH_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: twitch-chat-logger
+                  name: archivum
                   key: twitchClientId
             - name: CONFIG_PATH
               value: "/app/config_files/deploy_config.yml"
             - name: DATABASE_HOST_ADDRESS
               value: "mysql" # resolves to the mysql service running in the cluster
             - name: TRACKED_CHANNELS
-              value: 'fallenshadow,shadowchama,linkthedot,ninaninin,alicesawyer'
-              # kitanya_is_here,vividlyvivi,lilyhops
+              value: 'fallenshadow,shadowchama,linkthedot,ninaninin,alicesawyer'# kitanya_is_here,vividlyvivi,lilyhops

@@ -1,5 +1,0 @@
-#!/usr/bin/env zsh
-
-docker build --progress=plain -t $HOMELAB_ADDRESS:5000/twitch-chat-logger:latest -f twitch_chat_tracker/Dockerfile .;
-
-docker push $HOMELAB_ADDRESS:5000/twitch-chat-logger:latest

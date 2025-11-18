@@ -1,7 +1,7 @@
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: twitch-logger-query-interface-backend-route
+  name: archivum-backend
   namespace: default
 spec:
   entryPoints:
@@ -12,7 +12,7 @@ spec:
       match: Host(`api.looank.com`)
       services:
         - kind: Service
-          name: twitch-logger-query-interface-backend-service
+          name: archivum-backend
           port: 8080
   tls:
     certResolver: dns-simple

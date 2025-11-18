@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: nightly-checks
+  name: archivum-nightly-checks
   namespace: default
 spec:
   schedule: "0 23 * * *"
@@ -16,18 +16,18 @@ spec:
         spec:
           containers:
           - name: nightly-checks
-            image: homelab.local:5000/nightly_checks:latest
+            image: homelab.local:5000/archivum_nightly_checks:latest
             imagePullPolicy: Always
             env:
               - name: TWITCH_ACCESS_TOKEN
                 valueFrom:
                   secretKeyRef:
-                    name: twitch-chat-logger
+                    name: archivum
                     key: twitchAccessToken
               - name: TWITCH_CLIENT_ID
                 valueFrom:
                   secretKeyRef:
-                    name: twitch-chat-logger
+                    name: archivum
                     key: twitchClientId
               - name: CONFIG_PATH
                 value: "/config_files/deploy_config.yml"

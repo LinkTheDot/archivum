@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
 
-docker build --progress=plain -t $HOMELAB_ADDRESS:5000/twitch-logger-query-interface-backend:latest -f backend/Dockerfile .;
+docker build --progress=plain -t $HOMELAB_ADDRESS:5000/archivum-backend:latest -f backend/Dockerfile .;
 
-docker push $HOMELAB_ADDRESS:5000/twitch-logger-query-interface-backend:latest
+docker push $HOMELAB_ADDRESS:5000/archivum-backend:latest

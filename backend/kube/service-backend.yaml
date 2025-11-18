@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: twitch-logger-query-interface-backend-service
+  name: archivum-backend
 spec:
   selector:
-    app: twitch-logger-query-interface-backend
+    app: archivum-backend
   type: NodePort
   ports:
     - protocol: TCP

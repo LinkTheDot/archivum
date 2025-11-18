@@ -1,24 +1,24 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: twitch-tracker-report-generator
+  name: archivum-report-generator
 spec:
   completions: 1
   backoffLimit: 4
   template:
     metadata:
       labels:
-        app: twitch-tracker-report-generator
+        app: archivum-report-generator
     spec:
       containers:
-        - name: twitch-tracker-report-generator
-          image: homelab.local:5000/twitch-tracker-report-generator:latest
+        - name: archivum-report-generator
+          image: homelab.local:5000/archivum-report-generator:latest
           imagePullPolicy: Always
           env:
             - name: PASTEBIN_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: twitch-chat-logger
+                  name: archivum
                   key: pastebinApiKey
             - name: CONFIG_PATH
               value: "/app/config_files/deploy_config.yml"
