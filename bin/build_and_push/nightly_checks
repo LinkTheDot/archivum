@@ -1,5 +1,0 @@
-#!/usr/bin/env zsh
-
-docker build --progress=plain -t $HOMELAB_ADDRESS:5000/archivum-nightly-checks:latest -f nightly_checks/Dockerfile .;
-
-docker push $HOMELAB_ADDRESS:5000/archivum-nightly-checks:latest 
