@@ -2,6 +2,8 @@
 
 # Retrieves the database from the mysql instance running on Kubernetes.
 
+DATABASE_USER="root"
+DATABASE_PASSWORD="password"
 DATABASE_DUMP_NAME=$1
 ON_LOCAL_PORT="3307"
 REMOTE_PORT="3306"
@@ -30,7 +32,7 @@ done
 
 echo "Dumping the database to ${DATABASE_DUMP_NAME}"
 
-mysqldump --column-statistics=0 -h ${HOST} -P ${ON_LOCAL_PORT} -uroot -ppassword ${DATABASE_NAME} > ${DATABASE_DUMP_NAME} --force
+mysqldump --column-statistics=0 -h ${HOST} -P ${ON_LOCAL_PORT} -u ${DATABASE_USER} -p ${DATABASE_PASSWORD} ${DATABASE_NAME} > ${DATABASE_DUMP_NAME} --force
 
 echo "Closing connection."
 

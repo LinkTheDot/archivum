@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -74,16 +72,16 @@ impl MigrationTrait for Migration {
 enum TwitchUser {
   Table,
   Id,
-  TwitchId,
-  DisplayName,
-  LoginName,
+  _TwitchId,
+  _DisplayName,
+  _LoginName,
 }
 
 #[derive(DeriveIden)]
 enum UnknownUser {
   Table,
   Id,
-  Name,
+  _Name,
   CreatedAt,
 }
 
@@ -92,5 +90,5 @@ enum TwitchUserUnknownUserAssociation {
   Table,
   TwitchUserId,
   UnknownUserId,
-  CreatedAt,
+  _CreatedAt,
 }

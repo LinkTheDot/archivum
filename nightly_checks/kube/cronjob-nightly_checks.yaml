@@ -16,7 +16,7 @@ spec:
         spec:
           containers:
           - name: nightly-checks
-            image: homelab.local:5000/archivum_nightly_checks:latest
+            image: homelab.local:5000/archivum-nightly-checks:latest
             imagePullPolicy: Always
             env:
               - name: TWITCH_ACCESS_TOKEN

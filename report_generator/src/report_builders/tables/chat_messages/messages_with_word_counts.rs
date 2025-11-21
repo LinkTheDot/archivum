@@ -1,4 +1,16 @@
+use std::collections::HashMap;
 use entities::*;
+
+#[derive(Debug, Default, Clone)]
+pub struct UserMessageData<'a> {
+  pub user_messages: HashMap<i32, UserMessages<'a>>,
+
+  pub total_messages_sent: usize,
+  pub total_emote_filtered_messages_sent: usize,
+
+  pub total_words_sent: usize,
+  pub emote_filtered_total_words_sent: usize,
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct UserMessages<'a> {
@@ -21,6 +33,8 @@ pub struct MessageWithWordCount<'a> {
 
 impl<'a> UserMessages<'a> {
   /// Inserts the given message and updates all values based on the message.
+  ///
+  /// If the message is emote dominant it is also stored in its respective list.
   pub fn insert_message(&mut self, message: MessageWithWordCount<'a>) {
     self.total_words_sent += message.word_count;
 
@@ -33,7 +47,7 @@ impl<'a> UserMessages<'a> {
 
     self.all_messages.push(message.clone());
 
-    if message.is_emote_dominant {
+    if !message.is_emote_dominant {
       self.total_words_sent_emote_filtered_messages += message.word_count;
 
       self.emote_filtered_messages.push(message)
