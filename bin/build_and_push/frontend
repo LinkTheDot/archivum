@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+
+docker build --progress=plain -t $HOMELAB_ADDRESS:5000/archivum-frontend:latest -f frontend/Dockerfile frontend;
+
+docker push $HOMELAB_ADDRESS:5000/archivum-frontend:latest

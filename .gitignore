@@ -7,8 +7,6 @@ migration/target
 /file_reports
 secrets.*
 /docs
-bin/build_and_push*
-bin/update
 temp_*
 *.fsh
 *.db

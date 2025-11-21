@@ -1,12 +1,11 @@
 use crate::conditions::query_conditions::AppQueryConditions;
 use crate::errors::AppError;
+use crate::report_builders::tables::chat_messages::messages_with_word_counts::UserMessageData;
 use crate::EMOTE_DOMINANCE;
 use database_connection::get_database_connection;
 use entities::{emote_usage, stream_message, twitch_user};
 use messages_with_word_counts::{MessageWithWordCount, UserMessages};
-use num_traits::cast::ToPrimitive;
 use ranking_table::*;
-use sea_orm::entity::prelude::Decimal;
 use sea_orm::*;
 use std::collections::HashMap;
 use tabled::settings::Style;
@@ -37,9 +36,8 @@ pub async fn get_messages_sent_ranking(
     .filter(query_conditions.messages().clone())
     .all(database_connection)
     .await?;
-  let messages: Vec<&stream_message::Model> = messages.iter().collect();
 
-  let rankings = calculate_rankings(messages, database_connection, ranking_row_limit).await?;
+  let rankings = calculate_rankings(&messages, database_connection, ranking_row_limit).await?;
 
   tracing::info!("Building chat ranking table strings.");
 
@@ -64,121 +62,105 @@ pub async fn get_messages_sent_ranking(
 }
 
 async fn calculate_rankings(
-  messages: Vec<&stream_message::Model>,
+  messages: &Vec<stream_message::Model>,
   database_connection: &DatabaseConnection,
   ranking_row_limit: Option<usize>,
 ) -> Result<ChatRankings, AppError> {
   tracing::info!("Calculating rankings for all messages.");
 
-  let mut chats_sent: HashMap<i32, UserMessages> = HashMap::new();
-  let total_messages_sent = messages.len();
-  let mut emote_filtered_messages_sent: usize = 0;
-  let mut total_word_count: usize = 0;
-  let mut total_emote_filtered_chats_word_count: usize = 0;
+  let mut user_message_data: UserMessageData =
+    group_user_message_data(messages, database_connection).await?;
+  let mut chats_sent =
+    replace_ids_with_users(&mut user_message_data.user_messages, database_connection).await?;
+  chats_sent.sort_by(|(_, lhs), (_, rhs)| rhs.all_messages.len().cmp(&lhs.all_messages.len()));
+  let mut emote_filtered_chats_sent = build_emote_filtered_chats(&chats_sent);
 
-  tracing::info!("Building ranking list.");
+  if let Some(ranking_row_limit) = ranking_row_limit {
+    tracing::info!("Truncating rankings to {ranking_row_limit} messages");
 
-  for message in messages {
-    let user_messages = chats_sent.entry(message.twitch_user_id).or_default();
-
-    let (word_count, is_emote_dominant_message) =
-      match is_emote_message(message, database_connection).await {
-        Ok(Some(results)) => results,
-        Ok(None) => continue,
-        Err(error) => {
-          tracing::error!(
-            "Failed to determine if message `{}` is emote dominant. Reason: `{error}`",
-            message.id
-          );
-          continue;
-        }
-      };
-
-    let message = MessageWithWordCount {
-      stream_message: message,
-      word_count,
-      is_emote_dominant: is_emote_dominant_message,
-    };
-
-    total_word_count += word_count;
-
-    if is_emote_dominant_message {
-      total_emote_filtered_chats_word_count += word_count;
-      emote_filtered_messages_sent += 1;
-    }
-
-    user_messages.insert_message(message);
+    chats_sent.truncate(ranking_row_limit);
+    emote_filtered_chats_sent.truncate(ranking_row_limit);
   }
 
-  let mut emote_filtered_chats_sent =
-    replace_ids_with_users(chats_sent, database_connection).await?;
-  let mut unfiltered_chats_sent = emote_filtered_chats_sent.clone();
+  let unfiltered_message_rankings =
+    build_unfiltered_message_rankings(&user_message_data, chats_sent);
+  let emote_filtered_message_rankings =
+    build_emote_filtered_messages_rankings(&user_message_data, emote_filtered_chats_sent);
 
-  tracing::info!("Sorting unfiltered chats sent.");
+  Ok(ChatRankings {
+    all_messages: unfiltered_message_rankings,
+    emote_filtered_messages: emote_filtered_message_rankings,
+  })
+}
 
-  unfiltered_chats_sent
-    .sort_by(|(_, lhs), (_, rhs)| rhs.all_messages.len().cmp(&lhs.all_messages.len()));
+fn build_emote_filtered_chats<'a>(
+  chats_sent: &[(twitch_user::Model, UserMessages<'a>)],
+) -> Vec<(twitch_user::Model, UserMessages<'a>)> {
+  let mut emote_filtered_chats = chats_sent.to_vec();
 
-  tracing::info!("Sorting and removing users with no messages from emote filtered chats sent.");
-
-  emote_filtered_chats_sent
-    .retain(|(_user, chats_sent)| !chats_sent.emote_filtered_messages.is_empty());
-  emote_filtered_chats_sent.sort_by(|(_, lhs), (_, rhs)| {
+  emote_filtered_chats.retain(|(_user, chats_sent)| !chats_sent.emote_filtered_messages.is_empty());
+  emote_filtered_chats.sort_by(|(_, lhs), (_, rhs)| {
     rhs
       .emote_filtered_messages
       .len()
       .cmp(&lhs.emote_filtered_messages.len())
   });
 
-  if let Some(ranking_row_limit) = ranking_row_limit {
-    tracing::info!("Truncating rankings to {ranking_row_limit} messages");
+  emote_filtered_chats
+}
 
-    unfiltered_chats_sent.truncate(ranking_row_limit);
-    emote_filtered_chats_sent.truncate(ranking_row_limit);
-  }
+fn build_unfiltered_message_rankings(
+  user_message_data: &UserMessageData,
+  chats_sent: Vec<(twitch_user::Model, UserMessages)>,
+) -> Vec<RankingEntry> {
+  let total_messages_sent = user_message_data.total_messages_sent;
+  let total_word_count = user_message_data.total_words_sent;
 
-  tracing::info!("Building ranking entries for unfiltered messages sent.");
+  chats_sent
+      .iter()
+      .enumerate()
+      .map(|(place, (user, user_messages))| {
+        let mut place = (place + 1).to_string();
+        let messages_sent = user_messages.all_messages.len();
+        let chat_percentage = messages_sent as f32 / total_messages_sent as f32 * 100.0;
+        let average_words_per_message = user_messages.total_words_sent as f32 / messages_sent as f32;
+        let percentage_of_all_words = user_messages.total_words_sent as f32 / total_word_count as f32 * 100.0;
 
-  let unfiltered_message_rankings: Vec<RankingEntry> = unfiltered_chats_sent
-    .iter()
-    .enumerate()
-    .map(|(place, (user, user_messages))| {
-      let mut place = (place + 1).to_string();
-      let messages_sent = user_messages.all_messages.len();
-      let chat_percentage = messages_sent as f32 / total_messages_sent as f32 * 100.0;
-      let average_words_per_message = user_messages.total_words_sent as f32 / messages_sent as f32;
-      let percentage_of_all_words = user_messages.total_words_sent as f32 / total_word_count as f32 * 100.0;
+        // Sanity check just in case ids do not match
+        let id_from_user = user.id;
+        let id_from_message = user_messages.all_messages[0].stream_message.twitch_user_id;
+        assert_eq!(
+          id_from_user,
+          id_from_message,
+          "Mismatch in user ids detected when processing message rankings. {id_from_user} != {id_from_message}"
+        );
 
-      // Sanity check just in case ids do not match
-      let id_from_user = user.id;
-      let id_from_message = user_messages.all_messages[0].stream_message.twitch_user_id;
-      assert_eq!(
-        id_from_user,
-        id_from_message,
-        "Mismatch in user ids detected when processing message rankings. {id_from_user} != {id_from_message}"
-      );
-
-    if user_messages.first_message_sent_this_stream {
-      place.push('*')
-    }
-    if !user_messages.user_is_subscribed {
-      place.push('-')
-    }
-
-      RankingEntry {
-        place,
-        name: user.login_name.clone(),
-        messages_sent,
-        chat_percentage: format!("{:.4}", chat_percentage),
-        avg_words_per_message: format!("{:.2}", average_words_per_message),
-        percentage_of_all_words: format!("{:.2}", percentage_of_all_words), 
+      if user_messages.first_message_sent_this_stream {
+        place.push('*')
       }
-    })
-    .collect();
+      if !user_messages.user_is_subscribed {
+        place.push('-')
+      }
 
-  tracing::info!("Building ranking entries for emote filtered messages sent.");
+        RankingEntry {
+          place,
+          name: user.login_name.clone(),
+          messages_sent,
+          chat_percentage: format!("{:.4}", chat_percentage),
+          avg_words_per_message: format!("{:.2}", average_words_per_message),
+          percentage_of_all_words: format!("{:.2}", percentage_of_all_words),
+        }
+      }).collect()
+}
 
-  let emote_filtered_message_rankings: Vec<RankingEntry> = emote_filtered_chats_sent
+fn build_emote_filtered_messages_rankings(
+  user_message_data: &UserMessageData,
+  emote_filtered_chats_sent: Vec<(twitch_user::Model, UserMessages)>,
+) -> Vec<RankingEntry> {
+  let emote_filtered_messages_sent = user_message_data.total_emote_filtered_messages_sent;
+  let total_emote_filtered_chats_word_count = user_message_data.emote_filtered_total_words_sent;
+
+  emote_filtered_chats_sent
     .iter()
     .enumerate()
     .map(|(place, (user, user_messages))| {
@@ -207,61 +189,63 @@ async fn calculate_rankings(
         percentage_of_all_words: format!("{:.2}", percentage_of_all_words),
       }
     })
-    .collect();
-
-  Ok(ChatRankings {
-    all_messages: unfiltered_message_rankings,
-    emote_filtered_messages: emote_filtered_message_rankings,
-  })
+    .collect()
 }
 
-// Returns the real word count of the message and a bool if the message is emote dominant or not.
-// "Real word count" excludes the count of emotes used.
-//
-// Otherwise None is returned
-async fn is_emote_message(
-  message: &stream_message::Model,
+async fn group_user_message_data<'a>(
+  messages: &'a Vec<stream_message::Model>,
   database_connection: &DatabaseConnection,
-) -> Result<Option<(usize, bool)>, AppError> {
-  let Some(contents) = &message.contents else {
-    tracing::error!(
-      "Failed to get message with null contents. Message ID: {}",
-      message.id
-    );
+) -> Result<UserMessageData<'a>, AppError> {
+  let emote_usage = messages
+    .load_many(emote_usage::Entity, database_connection)
+    .await?;
 
-    return Ok(None);
-  };
-  let word_count = contents
-    .split_whitespace()
-    .filter(|word| !word.is_empty())
-    .count() as f32;
+  Ok(messages.iter().zip(emote_usage).fold(
+    UserMessageData::default(),
+    |mut grouped_user_messages, (message, emote_usage)| {
+      let Some(message_contents) = &message.contents else {
+        return grouped_user_messages;
+      };
 
-  let sum_usage_query = format!(
-    "SELECT COALESCE(SUM({}), 0) AS total FROM {} WHERE {} = {}",
-    emote_usage::Column::UsageCount.to_string(),
-    emote_usage::Entity.to_string(),
-    emote_usage::Column::StreamMessageId.to_string(),
-    message.id
-  );
-  let sum_usage_statement = Statement::from_string(DatabaseBackend::MySql, sum_usage_query);
-  let Some(query_result) = database_connection.query_one(sum_usage_statement).await? else {
-    tracing::warn!("Skipping result for message {} at step 1", message.id);
-    return Ok(None);
-  };
-  let total_emotes_used: Decimal = query_result.try_get("", "total")?;
-  let Some(total_emotes_used) = total_emotes_used.to_f32() else {
-    tracing::warn!("Skipping result for message {} at step 2", message.id);
-    return Ok(None);
-  };
+      let emotes_used: i32 = emote_usage
+        .iter()
+        .map(|emote_usage| emote_usage.usage_count)
+        .sum();
+      let word_count = message_contents
+        .split_whitespace()
+        .filter(|word| !word.is_empty())
+        .count() as i32;
 
-  let real_word_count = (word_count - total_emotes_used) as usize;
-  let is_emote_dominant_message = total_emotes_used / word_count <= EMOTE_DOMINANCE;
+      let real_words_count = (word_count - emotes_used) as usize;
+      let is_emote_dominant = (emotes_used as f32 / word_count as f32) >= EMOTE_DOMINANCE;
+      let user_messages = grouped_user_messages
+        .user_messages
+        .entry(message.twitch_user_id)
+        .or_default();
 
-  Ok(Some((real_word_count, is_emote_dominant_message)))
+      let message_with_word_count = MessageWithWordCount {
+        stream_message: message,
+        word_count: real_words_count,
+        is_emote_dominant,
+      };
+
+      user_messages.insert_message(message_with_word_count);
+
+      grouped_user_messages.total_messages_sent += 1;
+      grouped_user_messages.total_words_sent += real_words_count;
+
+      if !is_emote_dominant {
+        grouped_user_messages.total_emote_filtered_messages_sent += 1;
+        grouped_user_messages.emote_filtered_total_words_sent += real_words_count;
+      }
+
+      grouped_user_messages
+    },
+  ))
 }
 
 async fn replace_ids_with_users<'a>(
-  mut messages: HashMap<i32, UserMessages<'a>>,
+  messages: &mut HashMap<i32, UserMessages<'a>>,
   database_connection: &DatabaseConnection,
 ) -> Result<Vec<(twitch_user::Model, UserMessages<'a>)>, AppError> {
   tracing::info!("Getting users for each set of messages.");
@@ -294,7 +278,6 @@ mod tests {
   use super::*;
   use crate::testing_helper_methods::*;
   use sea_orm::{DatabaseBackend, MockDatabase};
-  use std::collections::BTreeMap;
 
   #[tokio::test]
   async fn calculate_rankings_gives_expected_result() {
@@ -318,25 +301,18 @@ mod tests {
         display_name: "user3".into(),
       },
     ];
+    let (messages, emote_usage) = get_fake_stream_chat_logs();
     let mock_database = MockDatabase::new(DatabaseBackend::MySql)
       .append_query_results([
-        vec![generate_total_query_result(0)],
-        vec![generate_total_query_result(2)],
-        vec![generate_total_query_result(2)],
-        vec![generate_total_query_result(0)],
-        vec![generate_total_query_result(2)],
-        vec![generate_total_query_result(2)],
-        vec![generate_total_query_result(2)],
-        vec![generate_total_query_result(0)],
+        // emote_usage data
+        emote_usage,
       ])
       .append_query_results([expected_user_query])
       .into_connection();
-    let messages = get_fake_stream_chat_logs();
-    let messages = messages.iter().collect();
 
     let expected_chat_rankings = get_expected_chat_rankings();
 
-    let chat_rankings = calculate_rankings(messages, &mock_database, None)
+    let chat_rankings = calculate_rankings(&messages, &mock_database, None)
       .await
       .unwrap();
 
@@ -404,14 +380,14 @@ mod tests {
     }
   }
 
-  fn get_fake_stream_chat_logs() -> Vec<stream_message::Model> {
+  fn get_fake_stream_chat_logs() -> (Vec<stream_message::Model>, Vec<emote_usage::Model>) {
     let mut first_time_message_not_subbed = generate_message(7, 3, "emote emote");
     first_time_message_not_subbed.is_first_message = 1;
     first_time_message_not_subbed.is_subscriber = 0;
     let mut second_message_not_subbed = generate_message(8, 3, "word in message");
     second_message_not_subbed.is_subscriber = 0;
 
-    vec![
+    let messages = vec![
       generate_message(1, 1, "This is message"),
       generate_message(2, 1, "emote emote This is message"),
       generate_message(3, 1, "emote emote"),
@@ -420,10 +396,19 @@ mod tests {
       generate_message(6, 2, "emote emote"),
       first_time_message_not_subbed,
       second_message_not_subbed,
-    ]
-  }
+    ];
 
-  fn generate_total_query_result(amount: i32) -> BTreeMap<&'static str, sea_orm::Value> {
-    BTreeMap::from([("total", sea_orm::Value::from(Decimal::from(amount)))])
+    let emote_usage = vec![
+      generate_emote_usage(1, 0, None),
+      generate_emote_usage(2, 2, None),
+      generate_emote_usage(3, 2, None),
+      generate_emote_usage(4, 0, None),
+      generate_emote_usage(5, 2, None),
+      generate_emote_usage(6, 2, None),
+      generate_emote_usage(7, 2, None),
+      generate_emote_usage(8, 0, None),
+    ];
+
+    (messages, emote_usage)
   }
 }

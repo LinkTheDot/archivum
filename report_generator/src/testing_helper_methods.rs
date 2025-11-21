@@ -1,5 +1,5 @@
 use chrono::{DateTime, TimeZone, Utc};
-use entities::stream_message;
+use entities::{emote_usage, stream_message};
 
 /// Creates a message with the given data, and every other value being set to 0. Except for the `is_subscribed` column which is set to true.
 pub fn generate_message(message_id: i32, user_id: i32, contents: &str) -> stream_message::Model {
@@ -14,6 +14,18 @@ pub fn generate_message(message_id: i32, user_id: i32, contents: &str) -> stream
     stream_id: None,
     is_subscriber: 1_i8,
     origin_id: Some("0".into()),
+  }
+}
+
+pub fn generate_emote_usage(
+  message_id: i32,
+  usage_count: i32,
+  emote_id: Option<i32>,
+) -> emote_usage::Model {
+  emote_usage::Model {
+    stream_message_id: message_id,
+    usage_count,
+    emote_id: emote_id.unwrap_or(0),
   }
 }
 
