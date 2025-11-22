@@ -3,9 +3,6 @@ When configured it will track the chats of given channels in real time and store
 donations, livestreams, bans and more to a central database and provide an API and
 website for accessing this data.
 
-The current limit of channels that can be tracked right now is 5, but this will
-be expanded in future updates.
-
 # Setup
 First you need to start by generating Twitch access and client tokens with the right 
 permissions. I suggest using [`swiftyspiffy's website for this`](https://twitchtokengenerator.com/).
