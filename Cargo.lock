@@ -1060,6 +1060,7 @@ dependencies = [
  "entities",
  "reqwest",
  "sea-orm",
+ "serde",
  "serde_json",
  "strsim",
  "thiserror 2.0.17",

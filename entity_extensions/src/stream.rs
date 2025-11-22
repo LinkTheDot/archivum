@@ -1,19 +1,21 @@
-use crate::errors::EntityExtensionError;
+use crate::{
+  errors::EntityExtensionError,
+  stream::twitch_stream_response::{TwitchStreamData, TwitchStreamResponse},
+};
 use app_config::AppConfig;
 use app_config::secret_string::Secret;
-use chrono::{DateTime, Utc};
 use entities::{muted_vod_segment, stream, twitch_user};
 use reqwest::RequestBuilder;
 use sea_orm::{sea_query::OnConflict, *};
-use serde_json::Value;
-use std::collections::HashMap;
 use url::Url;
+
+pub mod twitch_stream_response;
 
 const HELIX_STREAM_QUERY_URL: &str = "https://api.twitch.tv/helix/streams";
 
 pub trait StreamExtensions {
   fn is_live(&self) -> bool;
-  /// Returns a stream object if the user passed in is currently streaming.
+  /// Returns a stream model if the user is currently known to be streaming.
   async fn get_active_stream_for_user(
     user: &twitch_user::Model,
     database_connection: &DatabaseConnection,
@@ -25,7 +27,7 @@ pub trait StreamExtensions {
   /// Returns a map of login_name: (stream_start, stream_twitch_id)
   async fn get_active_livestreams<'a, I>(
     channels: I,
-  ) -> Result<HashMap<String, (DateTime<Utc>, String)>, EntityExtensionError>
+  ) -> Result<Vec<TwitchStreamData>, EntityExtensionError>
   where
     I: IntoIterator<Item = &'a twitch_user::Model>;
   async fn insert_muted_segments<I, M>(
@@ -67,10 +69,10 @@ impl StreamExtensions for stream::Model {
       .await
   }
 
-  /// Returns a map of login_name: (stream_start, stream_twitch_id)
+  /// Returns the list of stream data for currently active livestreams
   async fn get_active_livestreams<'a, I>(
     channels: I,
-  ) -> Result<HashMap<String, (DateTime<Utc>, String)>, EntityExtensionError>
+  ) -> Result<Vec<TwitchStreamData>, EntityExtensionError>
   where
     I: IntoIterator<Item = &'a twitch_user::Model>,
   {
@@ -87,66 +89,9 @@ impl StreamExtensions for stream::Model {
     }
 
     let response_body = response.text().await?;
-    let Value::Object(response_value): Value = serde_json::from_str(&response_body)? else {
-      return Err(EntityExtensionError::UnknownResponseBody {
-        location: "get active livestreams update live status",
-        response: response_body,
-      });
-    };
-    let Some(Value::Array(live_streams)) = response_value.get("data") else {
-      return Err(EntityExtensionError::UnknownResponseBody {
-        location: "get active livestreams update live status live stream list",
-        response: response_body,
-      });
-    };
+    let livestream_objects: TwitchStreamResponse = serde_json::from_str(&response_body)?;
 
-    let mut live_channels: HashMap<String, (DateTime<Utc>, String)> = HashMap::new();
-
-    for live_stream in live_streams {
-      let Value::Object(live_stream) = live_stream else {
-        continue;
-      };
-
-      let Some(Value::String(live_status)) = live_stream.get("type") else {
-        continue;
-      };
-
-      if live_status != "live" {
-        continue;
-      }
-
-      let Some(Value::String(streamer_login_name)) = live_stream.get("user_login") else {
-        continue;
-      };
-      let Some(Value::String(stream_start)) = live_stream.get("started_at") else {
-        continue;
-      };
-      let stream_start = match stream_start.parse::<DateTime<Utc>>() {
-        Ok(stream_start) => stream_start,
-        Err(error) => {
-          tracing::error!(
-            "Failed to parse the date time for streamer {:?}. Reason: {:?}",
-            streamer_login_name,
-            error
-          );
-          continue;
-        }
-      };
-      let Some(Value::String(stream_id)) = live_stream.get("id") else {
-        tracing::error!(
-          "Failed to get livestream ID for channel `{:?}`",
-          streamer_login_name
-        );
-        continue;
-      };
-
-      live_channels.insert(
-        streamer_login_name.to_owned(),
-        (stream_start, stream_id.to_owned()),
-      );
-    }
-
-    Ok(live_channels)
+    Ok(livestream_objects.data)
   }
 
   async fn insert_muted_segments<I, M>(
@@ -176,15 +121,15 @@ impl StreamExtensions for stream::Model {
     tracing::info!("{muted_vod_segments:?}");
 
     let potentional_conflicting_columns = [
-          muted_vod_segment::Column::StreamId,
-          muted_vod_segment::Column::Offset,
+      muted_vod_segment::Column::StreamId,
+      muted_vod_segment::Column::Offset,
     ];
 
     let _insert_result = muted_vod_segment::Entity::insert_many(muted_vod_segments)
       .on_conflict(
         OnConflict::columns(potentional_conflicting_columns)
-        .do_nothing_on(potentional_conflicting_columns)
-        .to_owned(),
+          .do_nothing_on(potentional_conflicting_columns)
+          .to_owned(),
       )
       .exec(database_connection)
       .await?;

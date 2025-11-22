@@ -21,6 +21,11 @@ impl TrackedChannels {
     })
   }
 
+  #[cfg(test)]
+  pub fn new_from_map(channels: HashMap<String, twitch_user::Model>) -> Self {
+    Self { channels }
+  }
+
   pub fn get_channel(&self, channel_login: &str) -> Option<twitch_user::Model> {
     self.channels.get(channel_login).cloned()
   }

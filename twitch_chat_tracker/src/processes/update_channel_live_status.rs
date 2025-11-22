@@ -90,22 +90,22 @@ async fn update_active_streams(
   let current_live_channels = stream::Model::get_active_livestreams(channels).await?;
   let mut live_stream_active_models: Vec<stream::ActiveModel> = vec![];
 
-  for (streamer_login_name, (stream_start_time, stream_twitch_id)) in
-    current_live_channels.into_iter()
+  for stream_data in
+    current_live_channels
   {
-    let Ok(stream_twitch_id) = stream_twitch_id.parse::<u64>() else {
+    let Ok(stream_twitch_id) = stream_data.stream_id.parse::<u64>() else {
       tracing::error!(
         "Failed to parse a stream ID. Streamer: {:?}. Value: {:?}",
-        streamer_login_name,
-        stream_twitch_id
+        stream_data.user_login,
+        stream_data.stream_id
       );
 
       continue;
     };
-    let Some(streamer) = tracked_channels.get_channel(&streamer_login_name) else {
+    let Some(streamer) = tracked_channels.get_channel(&stream_data.user_login) else {
       tracing::error!(
         "Failed to find streamer {:?} in the tracked channels list when updating active streams.",
-        streamer_login_name
+        stream_data.user_login
       );
 
       continue;
@@ -113,7 +113,7 @@ async fn update_active_streams(
 
     let active_model = stream::ActiveModel {
       twitch_stream_id: ActiveValue::Set(stream_twitch_id),
-      start_timestamp: ActiveValue::Set(Some(stream_start_time)),
+      start_timestamp: ActiveValue::Set(Some(stream_data.started_at)),
       twitch_user_id: ActiveValue::Set(streamer.id),
       ..Default::default()
     };
