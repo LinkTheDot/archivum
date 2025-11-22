@@ -15,6 +15,7 @@ thiserror = "2.0"
 app_config = { path = "../app_config" }
 entities = { path = "../entities" }
 tokio = { version = "1.47", features = ["macros"] }
+serde = { version = "1.0", features = ["derive"] }
 
 [features]
 __test_hook = []
