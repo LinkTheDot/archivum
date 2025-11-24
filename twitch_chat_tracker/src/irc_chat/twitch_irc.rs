@@ -2,7 +2,7 @@ use crate::channel::third_party_emote_list_storage::EmoteListStorage;
 use crate::errors::AppError;
 use crate::irc_chat::message_parser::MessageParser;
 use app_config::{secret_string::Secret, AppConfig};
-use database_connection::get_database_connection;
+use database_connection::database_connection_manager::DatabaseConnectionManager;
 use irc::client::{prelude::*, ClientStream};
 use irc::proto::{CapSubCommand, Message as IrcMessage};
 use std::{sync::Arc, time::Duration};
@@ -25,6 +25,8 @@ pub struct TwitchIrc {
   irc_client_stream: Option<ClientStream>,
   third_party_emote_lists: Arc<EmoteListStorage>,
   message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<bool, AppError>>>,
+
+  database_connection_manager: DatabaseConnectionManager,
 }
 
 impl TwitchIrc {
@@ -34,15 +36,19 @@ impl TwitchIrc {
     tracing::info!("Initializing Twitch IRC client.");
     let mut irc_client = Self::get_irc_client().await?;
     let irc_client_stream = irc_client.stream()?;
-    let database_connection = get_database_connection().await;
-    let third_party_emote_lists =
-      EmoteListStorage::new(AppConfig::channels(), database_connection).await?;
+    let database_connection_manager = DatabaseConnectionManager::new().await;
+
+    let third_party_emote_lists = {
+      let database_connection = database_connection_manager.acquire().await;
+      EmoteListStorage::new(AppConfig::channels(), &database_connection).await?
+    };
 
     Ok(Self {
       irc_client,
       irc_client_stream: Some(irc_client_stream),
       third_party_emote_lists: Arc::new(third_party_emote_lists),
       message_result_processor_sender,
+      database_connection_manager,
     })
   }
 
@@ -132,13 +138,21 @@ impl TwitchIrc {
     let future = self.get_mut_client_stream()?.next();
     let message_result = timeout(MESSAGE_WAIT_TIME, future).await;
 
-    let Ok(Some(message_result)) = message_result else {
-      tracing::debug!("Did not recieve a message.");
-
-      return Ok(());
+    let message_result = match message_result {
+      Ok(Some(message_result)) => message_result,
+      // The stream shouldn't return a None unless it was closed.
+      Ok(None) => {
+        return Err(AppError::IrcStreamClosed);
+      }
+      // 10s timeout
+      Err(_) => {
+        return Ok(());
+      }
     };
 
     let message = message_result?;
+
+    tracing::debug!("Got a message: {message:?}");
 
     self.process_message(message).await
   }
@@ -150,9 +164,14 @@ impl TwitchIrc {
       return Ok(());
     };
     let third_party_emote_lists = self.third_party_emote_lists.clone();
+    tracing::debug!("Getting lock on database connection manager.");
+    let database_connection_manager = self.database_connection_manager.clone();
 
-    let process_message_future =
-      Self::create_and_run_mesage_parser(message, third_party_emote_lists);
+    let process_message_future = Self::create_and_run_mesage_parser(
+      message,
+      database_connection_manager,
+      third_party_emote_lists,
+    );
     let process_message_handle = tokio::spawn(process_message_future);
 
     if let Err(error) = self
@@ -170,8 +189,11 @@ impl TwitchIrc {
   /// True is returned if the message was processed.
   async fn create_and_run_mesage_parser(
     message: IrcMessage,
+    database_connection_manager: DatabaseConnectionManager,
     third_party_emote_lists: Arc<EmoteListStorage>,
   ) -> std::result::Result<bool, AppError> {
+    tracing::debug!("Running message parsing.");
+
     match message.command {
       Command::JOIN(_, _, _) | Command::PART(_, _) => return Ok(false),
       Command::Response(_, _) => return Ok(false),
@@ -182,12 +204,14 @@ impl TwitchIrc {
       _ => (),
     }
 
+    tracing::debug!("Parsing message tags.");
+
     let Some(message_parser) = MessageParser::new(&message, &third_party_emote_lists)? else {
       return Ok(false);
     };
-    let database_connection = get_database_connection().await;
 
-    let result = message_parser.parse(database_connection).await;
+    let database_connection = database_connection_manager.acquire().await;
+    let result = message_parser.parse(&database_connection).await;
 
     if let Err(error) = &result {
       if !error.is_unique_constraint_violation() {

@@ -20,7 +20,7 @@ pub async fn run_main_process(
     let message_result = irc_client.next_message().await;
 
     match message_result {
-      Err(AppError::IrcError(irc::error::Error::PingTimeout)) => {
+      Err(AppError::IrcError(irc::error::Error::PingTimeout)) | Err(AppError::IrcStreamClosed) => {
         tracing::error!("=== PING TIMEOUT ERROR ===");
 
         if !reconnect_client(&mut irc_client, RECONNECT_ATTEMPTS).await {

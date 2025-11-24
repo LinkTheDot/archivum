@@ -171,4 +171,7 @@ pub enum AppError {
 
   #[error("Received a failed response from {}. Code: {}", location, code)]
   FailedResponse { location: &'static str, code: u16 },
+
+  #[error("The IRC stream has been closed.")]
+  IrcStreamClosed,
 }

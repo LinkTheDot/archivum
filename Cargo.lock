@@ -861,6 +861,7 @@ dependencies = [
  "migration",
  "sea-orm",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

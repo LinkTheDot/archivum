@@ -32,7 +32,7 @@ done
 
 echo "Dumping the database to ${DATABASE_DUMP_NAME}"
 
-mysqldump --column-statistics=0 -h ${HOST} -P ${ON_LOCAL_PORT} -u ${DATABASE_USER} -p ${DATABASE_PASSWORD} ${DATABASE_NAME} > ${DATABASE_DUMP_NAME} --force
+mysqldump --column-statistics=0 -h ${HOST} -P ${ON_LOCAL_PORT} -u${DATABASE_USER} -p${DATABASE_PASSWORD} ${DATABASE_NAME} > ${DATABASE_DUMP_NAME} --force
 
 echo "Closing connection."
 
