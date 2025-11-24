@@ -1,6 +1,5 @@
 use crate::errors::AppError;
 use app_config::AppConfig;
-use database_connection::get_database_connection;
 use entities::{prelude::*, twitch_user};
 use entity_extensions::{prelude::*, twitch_user::ChannelIdentifier};
 use sea_orm::*;
@@ -13,8 +12,9 @@ pub struct TrackedChannels {
 }
 
 impl TrackedChannels {
-  pub async fn new() -> Result<Self, AppError> {
-    let connected_channels = Self::get_channels_from_list(AppConfig::channels()).await?;
+  pub async fn new(database_connection: &DatabaseConnection) -> Result<Self, AppError> {
+    let connected_channels =
+      Self::get_channels_from_list(AppConfig::channels(), database_connection).await?;
 
     Ok(TrackedChannels {
       channels: connected_channels,
@@ -44,8 +44,8 @@ impl TrackedChannels {
   /// Takes a list of channel login names and returns a map containing the <login_name, channel_data>.
   async fn get_channels_from_list(
     channels: &Vec<String>,
+    database_connection: &DatabaseConnection,
   ) -> Result<HashMap<String, twitch_user::Model>, AppError> {
-    let database_connection = get_database_connection().await;
     let existing_channels_in_database: Vec<twitch_user::Model> = TwitchUser::find()
       .filter(twitch_user::Column::LoginName.is_in(channels))
       .all(database_connection)

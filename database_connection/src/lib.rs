@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use app_config::secret_string::Secret;
 use app_config::AppConfig;
@@ -6,12 +8,23 @@ pub use sea_orm::DatabaseConnection;
 use sea_orm::*;
 use tokio::sync::OnceCell;
 
-static DATABASE_CONNECTION: OnceCell<DatabaseConnection> = OnceCell::const_new();
+pub mod database_connection_manager;
+pub mod limited_database_connection;
+
+static DATABASE_CONNECTION: OnceCell<Arc<DatabaseConnection>> = OnceCell::const_new();
 
 pub async fn get_database_connection() -> &'static DatabaseConnection {
   DATABASE_CONNECTION
-    .get_or_init(|| async { get_connection().await.unwrap() })
+    .get_or_init(|| async { Arc::new(get_connection().await.unwrap()) })
     .await
+    .as_ref()
+}
+
+pub(crate) async fn get_database_connection_as_arc() -> Arc<DatabaseConnection> {
+  DATABASE_CONNECTION
+    .get_or_init(|| async { Arc::new(get_connection().await.unwrap()) })
+    .await
+    .clone()
 }
 
 pub async fn get_owned_database_connection() -> DatabaseConnection {
@@ -36,10 +49,10 @@ async fn get_connection() -> anyhow::Result<sea_orm::DatabaseConnection> {
 
   drop(database_connection);
 
-  let database_connection =
-    Database::connect(database_connection_string(Some(AppConfig::database())))
-      .await
-      .unwrap();
+  let mut opt = ConnectOptions::new(database_connection_string(Some(AppConfig::database())));
+  opt.max_connections(50);
+
+  let database_connection = Database::connect(opt).await.unwrap();
 
   run_migration(&database_connection).await?;
 
