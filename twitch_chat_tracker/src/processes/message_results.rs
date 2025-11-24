@@ -5,7 +5,7 @@ use tokio::{sync::mpsc, task::JoinHandle};
 
 const MESSAGE_COUNT_INTERVAL: Duration = Duration::new(10, 0);
 const MESSAGE_COUNT_SIZE: usize = 20;
-const PRINT_INTERVAL: Duration = Duration::new(120, 0);
+const PRINT_INTERVAL: Duration = Duration::new(3600, 0);
 
 #[derive(Debug)]
 struct MessageCounter {
