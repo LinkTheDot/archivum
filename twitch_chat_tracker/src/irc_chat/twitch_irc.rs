@@ -24,12 +24,12 @@ pub struct TwitchIrc {
   irc_client: Client,
   irc_client_stream: Option<ClientStream>,
   third_party_emote_lists: Arc<EmoteListStorage>,
-  message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<(), AppError>>>,
+  message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<bool, AppError>>>,
 }
 
 impl TwitchIrc {
   pub async fn new(
-    message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<(), AppError>>>,
+    message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<bool, AppError>>>,
   ) -> Result<Self, AppError> {
     tracing::info!("Initializing Twitch IRC client.");
     let mut irc_client = Self::get_irc_client().await?;
@@ -167,22 +167,23 @@ impl TwitchIrc {
     Ok(())
   }
 
+  /// True is returned if the message was processed.
   async fn create_and_run_mesage_parser(
     message: IrcMessage,
     third_party_emote_lists: Arc<EmoteListStorage>,
-  ) -> std::result::Result<(), AppError> {
+  ) -> std::result::Result<bool, AppError> {
     match message.command {
-      Command::JOIN(_, _, _) | Command::PART(_, _) => return Ok(()),
-      Command::Response(_, _) => return Ok(()),
-      Command::Raw(command, _) if &command == "USERSTATE" => return Ok(()),
-      Command::Raw(command, _) if &command == "ROOMSTATE" => return Ok(()),
-      Command::CAP(_, _, _, _) => return Ok(()),
-      Command::PONG(ref _url, _) => return Ok(()),
+      Command::JOIN(_, _, _) | Command::PART(_, _) => return Ok(false),
+      Command::Response(_, _) => return Ok(false),
+      Command::Raw(command, _) if &command == "USERSTATE" => return Ok(false),
+      Command::Raw(command, _) if &command == "ROOMSTATE" => return Ok(false),
+      Command::CAP(_, _, _, _) => return Ok(false),
+      Command::PONG(ref _url, _) => return Ok(false),
       _ => (),
     }
 
     let Some(message_parser) = MessageParser::new(&message, &third_party_emote_lists)? else {
-      return Ok(());
+      return Ok(false);
     };
     let database_connection = get_database_connection().await;
 
@@ -196,11 +197,11 @@ impl TwitchIrc {
         );
       } else {
         // Ignore the error if it's a unique constraint violation.
-        return Ok(());
+        return Ok(true);
       }
     }
 
-    result
+    result.map(|_| true)
   }
 }
 

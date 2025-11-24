@@ -15,7 +15,7 @@ pub struct TwitchIrcMessage {
 
 impl TwitchIrcMessage {
   pub const STREAMELEMENTS_TWITCH_ID: &str = "100135110";
-  pub const IGNORED_MESSAGE_IDS: &[&str] = &["bitsbadgetier", "announcement", "viewermilestone"];
+  pub const IGNORED_MESSAGE_IDS: &[&str] = &["bitsbadgetier", "announcement", "viewermilestone", "onetapgiftredeemed"];
 
   pub fn new(message: &IrcMessage) -> Result<Option<Self>, AppError> {
     let Some(mut tags) = TwitchIrcTagValues::new(message)? else {

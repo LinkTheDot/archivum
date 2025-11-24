@@ -6,7 +6,7 @@ use tokio::{sync::mpsc, task::JoinHandle};
 const RECONNECT_ATTEMPTS: usize = 10;
 
 pub async fn run_main_process(
-  message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<(), AppError>>>,
+  message_result_processor_sender: mpsc::UnboundedSender<JoinHandle<Result<bool, AppError>>>,
 ) -> ! {
   tracing::info!("Starting main process.");
 

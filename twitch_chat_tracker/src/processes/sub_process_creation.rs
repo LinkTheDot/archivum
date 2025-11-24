@@ -8,7 +8,7 @@ use tokio::{sync::mpsc, task::JoinHandle};
 /// These include the running animation, channel updator, and message parsing result manager.
 ///
 /// Returns the sender to the message parsing result manager.
-pub async fn create_sub_processes() -> mpsc::UnboundedSender<JoinHandle<Result<(), AppError>>> {
+pub async fn create_sub_processes() -> mpsc::UnboundedSender<JoinHandle<Result<bool, AppError>>> {
   tracing::info!("Creating sub processes.");
   let connected_channels = TrackedChannels::new().await.unwrap();
   let (irc_message_processing_sender, irc_message_processing_receiver) = mpsc::unbounded_channel();
