@@ -1,5 +1,5 @@
 use crate::error::*;
-use database_connection::get_owned_database_connection;
+use database_connection::create_new_connection;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
@@ -10,7 +10,7 @@ pub struct InterfaceConfig {
 
 impl InterfaceConfig {
   pub async fn new() -> Result<Self, AppError> {
-    let database_connection = get_owned_database_connection().await;
+    let database_connection = create_new_connection().await;
 
     Ok(Self {
       database_connection: Arc::new(database_connection),

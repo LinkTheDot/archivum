@@ -14,5 +14,5 @@ pub struct RankingEntry {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ChatRankings {
   pub all_messages: Vec<RankingEntry>,
-  pub emote_filtered_messages: Vec<RankingEntry>,
+  pub quality_filtered_messages: Vec<RankingEntry>,
 }

@@ -20,6 +20,9 @@ pub enum AppError {
   #[error("{}", .0)]
   TeraError(#[from] tera::Error),
 
+  #[error("{}", .0)]
+  EntityExtensionError(#[from] entity_extensions::errors::EntityExtensionError),
+
   #[error("Failed to generate a pastebin. Reason: {:?}", .0)]
   IncorrectPastebinResponse(String),
 

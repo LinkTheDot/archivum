@@ -17,12 +17,12 @@ pub struct Args {
   #[arg(short = 'f', long = "file_export")]
   generate_file_reports: bool,
 
-  /// Sets which month to generate the donator ranking report for.
+  /// Sets which month to generate report for that require a month.
   #[arg(short = 'm', long)]
-  donation_rank_month: Option<usize>,
-  /// Sets which year to generate the donator ranking report for.
+  month: Option<usize>,
+  /// Sets which year to generate report for that require a year.
   #[arg(short = 'y', long)]
-  donation_rank_year: Option<usize>,
+  year: Option<usize>,
 
   /// Sets how long in a stream to generate a report for. Takes a duration like `1:30:00` for 1.5 hours into a stream to gather the data in a report to. (WIP. Doesn't do anything at the moment.)
   #[arg(short = 't', long)]
@@ -66,11 +66,11 @@ impl Args {
   }
 
   pub fn get_month() -> Option<usize> {
-    Self::get_or_set().donation_rank_month
+    Self::get_or_set().month
   }
 
   pub fn get_year() -> Option<usize> {
-    Self::get_or_set().donation_rank_year
+    Self::get_or_set().year
   }
 
   pub fn stream_report_time() -> Option<&'static DateTime<Utc>> {

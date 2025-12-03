@@ -1,7 +1,6 @@
-use std::sync::Arc;
-
 use sea_orm::DatabaseConnection;
-use tokio::sync::{OwnedSemaphorePermit};
+use std::sync::Arc;
+use tokio::sync::OwnedSemaphorePermit;
 
 pub struct LimitedDatabaseConnection {
   pub(crate) connection: Arc<DatabaseConnection>,

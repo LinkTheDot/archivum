@@ -15,3 +15,4 @@ ingress*
 */spanix-user-messages
 *.txt
 spanix_scrubber/failed_spanix_messages
+/*chatterino_logs
