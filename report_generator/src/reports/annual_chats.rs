@@ -20,7 +20,7 @@ pub async fn generate_reports(streamer_twitch_user_id: i32) -> Result<Reports, A
     .build()?;
 
   tracing::info!("Generating chat message rankings for annual messages.");
-  let (unfiltered_annual_chat_report, annual_emote_filtered_chat_report) =
+  let (unfiltered_annual_chat_report, annual_quality_filtered_chat_report) =
     get_messages_sent_ranking(&annual_conditions, Some(ANNUAL_RANKING_ROW_LIMIT)).await?;
 
   let message_reports = vec![
@@ -29,8 +29,8 @@ pub async fn generate_reports(streamer_twitch_user_id: i32) -> Result<Reports, A
       unfiltered_annual_chat_report,
     ),
     Report::new(
-      "annual_emote_filtered_chat_report",
-      annual_emote_filtered_chat_report,
+      "annual_quality_filtered_chat_report",
+      annual_quality_filtered_chat_report,
     ),
   ];
 

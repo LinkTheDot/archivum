@@ -124,10 +124,10 @@ async fn get_baseline_reports(
   );
 
   tracing::info!("Generating chat message rankings.");
-  let (unfiltered_chat_report, emote_filtered_chat_report) =
+  let (unfiltered_chat_report, quality_filtered_chat_report) =
     get_messages_sent_ranking(query_conditions, None).await?;
   tracing::info!("Generating chat message rankings for subathon.");
-  let (unfiltered_subathon_chat_report, subathon_emote_filtered_chat_report) =
+  let (unfiltered_subathon_chat_report, subathon_quality_filtered_chat_report) =
     get_messages_sent_ranking(subathon_conditions, Some(SUBATHON_RANKING_ROW_LIMIT)).await?;
 
   tracing::info!("Gathering reports.");
@@ -135,14 +135,14 @@ async fn get_baseline_reports(
   let reports = vec![
     general_stats_report,
     Report::new("unfiltered_chat_rankings", unfiltered_chat_report),
-    Report::new("filtered_chat_rankings", emote_filtered_chat_report),
+    Report::new("filtered_chat_rankings", quality_filtered_chat_report),
     Report::new(
       "unfiltered_subathon_chat_report",
       unfiltered_subathon_chat_report,
     ),
     Report::new(
-      "subathon_emote_filtered_chat_report",
-      subathon_emote_filtered_chat_report,
+      "subathon_quality_filtered_chat_report",
+      subathon_quality_filtered_chat_report,
     ),
     general_stats_report_with_donations,
   ];
@@ -183,7 +183,7 @@ async fn get_conditional_reports(
   if Args::run_monthly_chat_ranking() {
     tracing::info!("Generating monthly chat message rankings.");
 
-    let (monthly_unfiltered_chat_report, monthly_emote_filtered_chat_report) =
+    let (monthly_unfiltered_chat_report, monthly_quality_filtered_chat_report) =
       get_messages_sent_ranking(monthly_conditions, Some(MONTHLY_RANKING_ROW_LIMIT)).await?;
 
     conditional_reports.push(Report::new(
@@ -191,8 +191,8 @@ async fn get_conditional_reports(
       monthly_unfiltered_chat_report,
     ));
     conditional_reports.push(Report::new(
-      "monthly_emote_filtered_chat_rankings",
-      monthly_emote_filtered_chat_report,
+      "monthly_quality_filtered_chat_rankings",
+      monthly_quality_filtered_chat_report,
     ));
   }
 

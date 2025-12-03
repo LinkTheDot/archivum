@@ -18,10 +18,10 @@ mod ranking_table;
 
 const QUALITY_WORD_COUNT_THRESHOLD: usize = 4;
 const EMOTE_USAGE_BATCH_SIZE: usize = 30000;
-const MESSAGE_QUALITY_INFO: &str = r#"
-This table removes messages that are "low quality". The rules for a low quality messages are as follows:
+const MESSAGE_QUALITY_INFO: &str = r#"This table removes messages that are "low quality". 
+The rules for a low quality messages are as follows:
  - More than {emote_message_threshold}% of the words were Twitch or third party emotes.
- - The message had less than {quality_message_word_threshold}
+ - The message had less than {quality_message_word_threshold} actual words (emotes not counted as words).
 "#;
 const WORD_PERCENTAGE_INFO: &str = "The `%_of_words` column shows how many of all words between all messages were from that particular user. Emotes are not counted as words.";
 const USER_TAG_INFO: &str = r#"After a user's ranking will be indicators for both if they're subscribed and if they're a first time chatter.
