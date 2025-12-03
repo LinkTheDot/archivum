@@ -1,5 +1,5 @@
 # Archivum
-Archivum is a full-stack app focused on building a data warehouse for the site Twitch.tv.
+Archivum is a full-stack web app focused on building a data warehouse for the site Twitch.tv.
 When configured it will track the chats of given channels in real time and store all messages, 
 donations, livestreams, bans and more to a central database and provide an API and
 website for accessing this data.
