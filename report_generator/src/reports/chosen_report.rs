@@ -6,6 +6,7 @@ pub enum ChosenReport {
   Basic,
   Subathon,
   CalculateSubathonPoints,
+  AnnualMessages,
 }
 
 impl FromStr for ChosenReport {
@@ -16,6 +17,7 @@ impl FromStr for ChosenReport {
       "basic" => Ok(Self::Basic),
       "subathon" => Ok(Self::Subathon),
       "calculate_subathon_points" => Ok(Self::CalculateSubathonPoints),
+      "annual_messages" => Ok(Self::AnnualMessages),
       _ => Err(format!("Invalid variant: {}", s)),
     }
   }

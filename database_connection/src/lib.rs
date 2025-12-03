@@ -27,32 +27,31 @@ pub(crate) async fn get_database_connection_as_arc() -> Arc<DatabaseConnection> 
     .clone()
 }
 
-pub async fn get_owned_database_connection() -> DatabaseConnection {
+pub async fn create_new_connection() -> DatabaseConnection {
   get_connection().await.unwrap()
 }
 
 async fn get_connection() -> anyhow::Result<sea_orm::DatabaseConnection> {
-  let database_connection = Database::connect(database_connection_string(None))
-    .await
-    .unwrap();
+  let database_connection = Database::connect(database_connection_string(None)).await?;
 
-  let _creation_exec_result = &match database_connection.get_database_backend() {
-    DbBackend::MySql => database_connection
-      .execute(Statement::from_string(
-        database_connection.get_database_backend(),
-        format!("CREATE DATABASE IF NOT EXISTS `{}`;", AppConfig::database()),
-      ))
-      .await
-      .unwrap(),
-    _ => panic!("Unsupported database backend."),
+  match database_connection.get_database_backend() {
+    DbBackend::MySql => {
+      database_connection
+        .execute(Statement::from_string(
+          database_connection.get_database_backend(),
+          format!("CREATE DATABASE IF NOT EXISTS `{}`;", AppConfig::database()),
+        ))
+        .await?
+    }
+    _ => anyhow::bail!("Unsupported database backend."),
   };
 
-  drop(database_connection);
+  database_connection.close().await?;
 
   let mut opt = ConnectOptions::new(database_connection_string(Some(AppConfig::database())));
   opt.max_connections(50);
 
-  let database_connection = Database::connect(opt).await.unwrap();
+  let database_connection = Database::connect(opt).await?;
 
   run_migration(&database_connection).await?;
 

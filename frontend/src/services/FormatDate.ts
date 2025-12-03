@@ -7,5 +7,5 @@ export const formatDate = (timestamp: string): string => {
   const minutes = date.getUTCMinutes().toString().padStart(2, '0');
   const seconds = date.getUTCSeconds().toString().padStart(2, '0');
 
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`;
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };

@@ -106,19 +106,16 @@ impl StreamExtensions for stream::Model {
     let muted_vod_segments: Vec<muted_vod_segment::ActiveModel> = muted_vod_segments
       .into_iter()
       .map(|muted_vod_segment| {
-        let mut muted_vod_segment: muted_vod_segment::ActiveModel = muted_vod_segment.into();
-
-        muted_vod_segment.stream_id = Set(self.id);
-
-        muted_vod_segment
+        muted_vod_segment::ActiveModel {
+          stream_id: Set(self.id),
+          ..muted_vod_segment.into()
+        }
       })
       .collect();
 
     if muted_vod_segments.is_empty() {
       return Ok(());
     }
-
-    tracing::info!("{muted_vod_segments:?}");
 
     let potentional_conflicting_columns = [
       muted_vod_segment::Column::StreamId,
