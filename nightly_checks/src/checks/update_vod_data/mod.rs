@@ -1,2 +1,2 @@
-mod twitch_objects;
 pub mod config;
+mod twitch_objects;

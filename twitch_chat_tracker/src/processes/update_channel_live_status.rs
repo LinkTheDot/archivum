@@ -90,9 +90,7 @@ async fn update_active_streams(
   let current_live_channels = stream::Model::get_active_livestreams(channels).await?;
   let mut live_stream_active_models: Vec<stream::ActiveModel> = vec![];
 
-  for stream_data in
-    current_live_channels
-  {
+  for stream_data in current_live_channels {
     let Ok(stream_twitch_id) = stream_data.stream_id.parse::<u64>() else {
       tracing::error!(
         "Failed to parse a stream ID. Streamer: {:?}. Value: {:?}",

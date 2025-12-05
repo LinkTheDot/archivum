@@ -66,7 +66,8 @@ impl MessageParser<'_> {
     };
 
     if donation_event::Model::gift_sub_origin_id_already_exists(origin_id, database_connection)
-      .await? && gift_amount == 1.0
+      .await?
+      && gift_amount == 1.0
     {
       return Ok(None);
     }

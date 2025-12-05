@@ -1,4 +1,4 @@
-use app_config::{log_level_wrapper::LoggingConfigLevel, AppConfig};
+use app_config::{AppConfig, log_level_wrapper::LoggingConfigLevel};
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 

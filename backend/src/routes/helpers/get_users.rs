@@ -23,7 +23,9 @@ pub trait GetUsers {
   }
 
   fn get_user_query(&self) -> Result<Select<twitch_user::Entity>, AppError> {
-    self.get_maybe_user_query().ok_or(AppError::NoQueryParameterFound)
+    self
+      .get_maybe_user_query()
+      .ok_or(AppError::NoQueryParameterFound)
   }
 
   fn get_maybe_user_query(&self) -> Option<Select<twitch_user::Entity>> {
@@ -40,7 +42,9 @@ pub trait GetUsers {
     if let Some(logins_string) = self.get_many_logins() {
       let logins: Vec<&str> = logins_string.split(',').collect();
 
-      return Some(twitch_user::Entity::find().filter(twitch_user::Column::LoginName.is_in(logins)));
+      return Some(
+        twitch_user::Entity::find().filter(twitch_user::Column::LoginName.is_in(logins)),
+      );
     }
 
     if let Some(twitch_ids) = self.get_many_twitch_ids() {

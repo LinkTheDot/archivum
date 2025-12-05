@@ -107,15 +107,13 @@ impl UpdateVodDataConfig<'_> {
 
       tracing::info!("Filtering unwanted vods");
 
-      vod_response
-        .vod_list
-        .retain(|vod| {
-          let Some(stream_id) = vod.stream_id() else {
-            return false;
-          };
+      vod_response.vod_list.retain(|vod| {
+        let Some(stream_id) = vod.stream_id() else {
+          return false;
+        };
 
-          desired_stream_ids.contains(stream_id)
-        });
+        desired_stream_ids.contains(stream_id)
+      });
 
       tracing::info!(
         "`{}` vods left after filtering.",
@@ -127,7 +125,6 @@ impl UpdateVodDataConfig<'_> {
       } else {
         tracing::info!("Skipping empty vod list.");
       }
-
     }
 
     users_and_vods
