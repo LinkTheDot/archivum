@@ -1,6 +1,6 @@
+use crate::error::AppError;
 use entities::twitch_user;
 use sea_orm::*;
-use crate::error::AppError;
 
 /// Guesses a user based on their login name.
 pub async fn get_channel(

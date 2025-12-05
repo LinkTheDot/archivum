@@ -47,7 +47,9 @@ pub async fn get_streams(
   let mut stream_response =
     StreamDto::response_from_stream_list(&user, fetched_paginated_streams, database_connection)
       .await?;
-  stream_response.streams.sort_by(|lhs, rhs| rhs.id.cmp(&lhs.id));
+  stream_response
+    .streams
+    .sort_by(|lhs, rhs| rhs.id.cmp(&lhs.id));
 
   Ok(axum::Json(PaginatedResponse {
     data: stream_response,

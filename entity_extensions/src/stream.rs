@@ -105,11 +105,9 @@ impl StreamExtensions for stream::Model {
   {
     let muted_vod_segments: Vec<muted_vod_segment::ActiveModel> = muted_vod_segments
       .into_iter()
-      .map(|muted_vod_segment| {
-        muted_vod_segment::ActiveModel {
-          stream_id: Set(self.id),
-          ..muted_vod_segment.into()
-        }
+      .map(|muted_vod_segment| muted_vod_segment::ActiveModel {
+        stream_id: Set(self.id),
+        ..muted_vod_segment.into()
       })
       .collect();
 
