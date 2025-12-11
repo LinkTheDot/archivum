@@ -62,7 +62,7 @@ impl AppQueryConditions {
 
       streams: Condition::all()
         .add(stream::Column::StartTimestamp.gte(start_date))
-        .add(stream::Column::EndTimestamp.gte(end_date)),
+        .add(stream::Column::EndTimestamp.lte(end_date)),
 
       stream_id: None,
       date_start: Some(start_date),
