@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: archivum-backend
-          image: homelab.local:5000/archivum-backend:latest
+          image: homelab.local:30005/archivum-backend:latest
           imagePullPolicy: Always
           env:
             - name: CONFIG_PATH

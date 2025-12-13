@@ -12,7 +12,7 @@ spec:
     spec:
       containers:
         - name: archivum-report-generator
-          image: homelab.local:5000/archivum-report-generator:latest
+          image: homelab.local:30005/archivum-report-generator:latest
           imagePullPolicy: Always
           env:
             - name: PASTEBIN_API_KEY
