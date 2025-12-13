@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: archivum-twitch-tracker
-          image: homelab.local:5000/archivum-twitch-tracker:latest
+          image: homelab.local:30005/archivum-twitch-tracker:latest
           imagePullPolicy: Always
           env:
             - name: TWITCH_ACCESS_TOKEN

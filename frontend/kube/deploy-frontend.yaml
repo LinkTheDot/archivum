@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: archivum-frontend
-          image: homelab.local:5000/archivum-frontend
+          image: homelab.local:30005/archivum-frontend
           imagePullPolicy: Always
           ports:
           - containerPort: 80

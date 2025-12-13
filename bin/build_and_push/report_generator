@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
 
-docker build --progress=plain -t $HOMELAB_ADDRESS:5000/archivum-report-generator:latest -f report_generator/Dockerfile .;
+docker build --progress=plain -t $HOMELAB_ADDRESS:30005/archivum-report-generator:latest -f report_generator/Dockerfile .;
 
-docker push $HOMELAB_ADDRESS:5000/archivum-report-generator:latest
+docker push $HOMELAB_ADDRESS:30005/archivum-report-generator:latest
