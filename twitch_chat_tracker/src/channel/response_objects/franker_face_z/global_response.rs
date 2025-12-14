@@ -1,8 +1,10 @@
-use serde::{Deserialize, Deserializer};
 use crate::channel::response_objects::{
   emote_response::{EmoteResponse, EmoteResponseList},
   franker_face_z::emote_response::*,
 };
+use entities::sea_orm_active_enums::ExternalService;
+use serde::{Deserialize, Deserializer};
+use std::collections::HashMap;
 
 /// Global API response: https://api.betterttv.net/3/cached/frankerfacez/emotes/global
 #[derive(Debug)]
@@ -32,6 +34,8 @@ impl From<FrankerFaceZGlobalResponse> for EmoteResponseList {
       })
       .collect();
 
-    EmoteResponseList { emotes }
+    EmoteResponseList {
+      emotes: HashMap::from([(ExternalService::FrankerFaceZ, emotes)]),
+    }
   }
 }

@@ -2,6 +2,7 @@ use crate::channel::response_objects::{
   emote_response::{EmoteResponse, EmoteResponseList},
   franker_face_z::emote_response::*,
 };
+use entities::sea_orm_active_enums::ExternalService;
 use std::collections::HashMap;
 
 /// User API response: https://api.frankerfacez.com/v1/room/id/137524728
@@ -30,6 +31,8 @@ impl From<FrankerFaceZUserResponse> for EmoteResponseList {
       })
       .collect();
 
-    EmoteResponseList { emotes }
+    EmoteResponseList {
+      emotes: HashMap::from([(ExternalService::FrankerFaceZ, emotes)]),
+    }
   }
 }

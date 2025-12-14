@@ -55,7 +55,7 @@ async fn store_messages<P: AsRef<Path>>(
   channel: twitch_user::Model,
   date: NaiveDate,
 ) {
-  todo!("Implement the new emote usage table.");
+  panic!("Implement the new emote usage table.");
   let chatterino_file_contents = fs::read_to_string(chatterino_logs_file_path).await.unwrap();
   let database_connection = get_database_connection().await;
 

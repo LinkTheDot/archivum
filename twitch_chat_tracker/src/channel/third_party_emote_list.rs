@@ -103,9 +103,13 @@ impl EmoteList {
     emotes.extend(bttv_emotes);
     emotes.extend(franker_face_z_emotes);
 
-    println!("{:#?}", emotes);
+    let emotes = emotes.batch_insert_emotes(database_connection).await?;
+    let emote_map: HashMap<String, emote::Model> = emotes
+      .into_iter()
+      .map(|emote| (emote.name.clone(), emote))
+      .collect();
 
-    todo!("Refactor and implement third party emote retrieval.");
+    Ok(emote_map)
   }
 
   async fn seven_tv_emote_list(
@@ -175,8 +179,6 @@ impl EmoteList {
     let reqwest_client = reqwest::Client::new();
     let response = reqwest_client.get(fetch_url).send().await?;
 
-    println!("Response: {response:?}");
-
     let status = response.status();
 
     if !status.is_success() {
@@ -187,8 +189,6 @@ impl EmoteList {
     }
 
     let response_body = response.text().await?;
-
-    println!("Response Body: {response_body:?}");
 
     let emote_response_list: EmoteResponseList =
       serde_json::from_str::<ResponseType>(&response_body)?.into();
@@ -407,24 +407,4 @@ impl EmoteList {
 }
 
 #[cfg(test)]
-mod tests {
-  use sea_orm::MockDatabase;
-
-  use super::*;
-
-  #[tokio::test]
-  async fn manual_testing() {
-    let channel = twitch_user::Model {
-      twitch_id: 137524728,
-      id: 0,
-      login_name: "".into(),
-      display_name: "".into(),
-    };
-
-    let database_connection = MockDatabase::new(sea_orm::DatabaseBackend::MySql).into_connection();
-
-    let _full_emote_list = EmoteList::get_full_emote_list(&channel, &database_connection)
-      .await
-      .unwrap();
-  }
-}
+mod tests {}

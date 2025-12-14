@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use entities::sea_orm_active_enums::ExternalService;
+
 use crate::channel::response_objects::{
   emote_response::{EmoteResponse, EmoteResponseList},
   seven_tv::emote_response::SevenTvEmoteSet,
@@ -23,6 +27,8 @@ impl From<SevenTvUserResponse> for EmoteResponseList {
       })
       .collect();
 
-    EmoteResponseList { emotes }
+    EmoteResponseList {
+      emotes: HashMap::from([(ExternalService::SevenTv, emotes)]),
+    }
   }
 }

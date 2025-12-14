@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use crate::channel::response_objects::{
   bttv::emote_set::*,
   emote_response::{EmoteResponse, EmoteResponseList},
 };
+use entities::sea_orm_active_enums::ExternalService;
 use serde::{Deserialize, Deserializer};
 
 /// Global API response: https://api.betterttv.net/3/cached/emotes/global
@@ -32,6 +34,6 @@ impl From<BttvGlobalResponse> for EmoteResponseList {
       })
       .collect();
 
-    EmoteResponseList { emotes }
+    EmoteResponseList { emotes: HashMap::from([(ExternalService::Bttv, emotes)])  }
   }
 }
