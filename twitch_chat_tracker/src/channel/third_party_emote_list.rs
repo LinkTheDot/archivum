@@ -407,4 +407,95 @@ impl EmoteList {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+  use super::*;
+
+  fn create_test_emote(id: i32, name: &str, external_id: &str) -> emote::Model {
+    emote::Model {
+      id,
+      name: name.to_string(),
+      external_id: external_id.to_string(),
+      external_service: ExternalService::SevenTv,
+    }
+  }
+
+  fn create_emote_list_with_emotes(channel_name: &str, emotes: Vec<emote::Model>) -> EmoteList {
+    let emote_list: HashMap<String, emote::Model> =
+      emotes.into_iter().map(|e| (e.name.clone(), e)).collect();
+
+    EmoteList {
+      channel_name: channel_name.to_string(),
+      emote_list,
+    }
+  }
+
+  mod contains {
+    use super::*;
+
+    #[test]
+    fn returns_true_for_existing_emote() {
+      let emotes = vec![create_test_emote(1, "test_emote", "ext1")];
+      let emote_list = create_emote_list_with_emotes("channel", emotes);
+
+      assert!(emote_list.contains("test_emote"));
+    }
+
+    #[test]
+    fn returns_false_for_non_existing_emote() {
+      let emotes = vec![create_test_emote(1, "test_emote", "ext1")];
+      let emote_list = create_emote_list_with_emotes("channel", emotes);
+
+      assert!(!emote_list.contains("non_existent"));
+    }
+
+    #[test]
+    fn is_case_sensitive() {
+      let emotes = vec![create_test_emote(1, "TestEmote", "ext1")];
+      let emote_list = create_emote_list_with_emotes("channel", emotes);
+
+      assert!(emote_list.contains("TestEmote"));
+      assert!(!emote_list.contains("testemote"));
+      assert!(!emote_list.contains("TESTEMOTE"));
+    }
+  }
+
+  mod get {
+    use super::*;
+
+    #[test]
+    fn returns_some_for_existing_emote() {
+      let emotes = vec![create_test_emote(1, "test_emote", "ext123")];
+      let emote_list = create_emote_list_with_emotes("channel", emotes);
+
+      let result = emote_list.get("test_emote");
+
+      assert!(result.is_some());
+      let emote = result.unwrap();
+      assert_eq!(emote.name, "test_emote");
+      assert_eq!(emote.external_id, "ext123");
+      assert_eq!(emote.id, 1);
+    }
+
+    #[test]
+    fn returns_none_for_non_existing_emote() {
+      let emotes = vec![create_test_emote(1, "test_emote", "ext1")];
+      let emote_list = create_emote_list_with_emotes("channel", emotes);
+
+      assert!(emote_list.get("non_existent").is_none());
+    }
+
+    #[test]
+    fn returns_correct_emote_from_multiple() {
+      let emotes = vec![
+        create_test_emote(1, "emote_a", "ext_a"),
+        create_test_emote(2, "emote_b", "ext_b"),
+        create_test_emote(3, "emote_c", "ext_c"),
+      ];
+      let emote_list = create_emote_list_with_emotes("channel", emotes);
+
+      let result = emote_list.get("emote_b").unwrap();
+      assert_eq!(result.id, 2);
+      assert_eq!(result.external_id, "ext_b");
+    }
+  }
+}
