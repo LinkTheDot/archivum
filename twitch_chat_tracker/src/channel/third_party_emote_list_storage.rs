@@ -1,7 +1,8 @@
 use crate::channel::third_party_emote_list::EmoteList;
 use crate::errors::AppError;
 use entities::{emote, twitch_user};
-use entity_extensions::prelude::*;
+use entity_extensions::{prelude::*, twitch_user::ChannelIdentifier};
+use futures::stream::{self, StreamExt};
 use sea_orm::DatabaseConnection;
 use std::collections::HashMap;
 
@@ -11,6 +12,9 @@ pub struct EmoteListStorage {
 }
 
 impl EmoteListStorage {
+  /// This constant limits how many channels retrieve emote data from third parties at a time.
+  const EMOTE_FETCH_BATCH_LIMIT: usize = 3;
+
   /// Generates the list of emotes for each channel in the app config.
   /// Global emotes are under the name [`GLOBAL`](EmoteList::GLOBAL_NAME).
   ///
@@ -23,50 +27,32 @@ impl EmoteListStorage {
       panic!("Called new on EmoteListStorage in a test environment. Use EmoteListStorage::test_list instead.");
     }
 
-    let mut third_party_emote_lists = HashMap::new();
+    let channel_names: Vec<&str> = channel_names.iter().map(String::as_str).collect();
 
-    match EmoteList::get_global_emote_list(database_connection).await {
-      Ok(global_emote_list) => {
-        third_party_emote_lists.insert(
-          global_emote_list.channel_name().to_string(),
-          global_emote_list,
-        );
-      }
-      Err(error) => {
-        tracing::error!(
-          "Failed to retrieve the global third party emote list. Reason: {:?}",
-          error
-        );
-      }
-    }
+    let channel_identifiers = ChannelIdentifier::from_login_list(channel_names);
+    let channels =
+      twitch_user::Model::get_many_by_identifier(channel_identifiers, database_connection).await?;
 
-    for channel_login_name in channel_names {
-      let channel =
-        twitch_user::Model::get_or_set_by_name(channel_login_name, database_connection).await?;
+    let third_party_emote_lists_results: Vec<Result<(String, EmoteList), AppError>> =
+      stream::iter(channels)
+        .map(|channel| async move {
+          let channel_login = channel.login_name.clone();
+          let emote_list = EmoteList::get_list(&channel, database_connection).await?;
 
-      let channel_emote_list = match EmoteList::get_list(&channel, database_connection).await {
-        Ok(emote_list) => emote_list,
-        Err(error) => {
-          tracing::error!(
-            "Failed to retrieve third party emote list for channel {}. Reason: {:?}",
-            channel_login_name,
-            error
-          );
+          Ok::<_, AppError>((channel_login, emote_list))
+        })
+        .buffer_unordered(Self::EMOTE_FETCH_BATCH_LIMIT)
+        .collect::<Vec<_>>()
+        .await;
 
-          third_party_emote_lists.insert(
-            channel_login_name.clone(),
-            EmoteList::get_empty(channel_login_name.to_owned()),
-          );
-
-          continue;
-        }
-      };
-
-      third_party_emote_lists.insert(
-        channel_emote_list.channel_name().to_owned(),
-        channel_emote_list,
-      );
-    }
+    let third_party_emote_lists: HashMap<String, EmoteList> = third_party_emote_lists_results
+      .into_iter()
+      .map(|result| {
+        result.inspect_err(|error| {
+          tracing::error!("Failed to retrieve emote list for channel. Error: {error}");
+        })
+      })
+      .collect::<Result<_, AppError>>()?;
 
     Ok(Self {
       third_party_emote_lists,

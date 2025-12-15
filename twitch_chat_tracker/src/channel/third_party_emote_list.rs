@@ -78,7 +78,6 @@ impl EmoteList {
     Ok(Self {
       channel_name: channel.login_name.to_owned(),
       emote_list,
-      // TODO: implememnt bttv and frankerfacez querying
     })
   }
 
@@ -88,10 +87,6 @@ impl EmoteList {
     channel: &twitch_user::Model,
     database_connection: &DatabaseConnection,
   ) -> Result<HashMap<String, emote::Model>, AppError> {
-    // Create a getter method for each third party response.
-    // Convert responses to one EmoteResponseList and join.
-    // Batch insert -> Retrieve batch.
-    // Return built emotes.
     let channel_twitch_id = channel.twitch_id.to_string();
 
     let mut emotes = EmoteResponseList::default();
@@ -234,17 +229,6 @@ impl EmoteList {
     });
 
     Some(emote_lists)
-  }
-
-  async fn get_7tv_list(
-    channel: &twitch_user::Model,
-    database_connection: &DatabaseConnection,
-  ) -> Result<HashMap<String, emote::Model>, AppError> {
-    let mut user_query_url = Url::parse(SEVEN_TV_API_URL)?;
-    let channel_path = format!("users/twitch/{}", channel.twitch_id);
-    user_query_url = user_query_url.join(&channel_path)?;
-
-    Self::_7tv_emote_list(user_query_url, database_connection).await
   }
 
   // The global response body is formatted different from the regular users, so it lives in a separate method.

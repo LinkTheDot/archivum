@@ -28,11 +28,7 @@ impl EmoteResponseList {
   /// Merges lists for duplicate external services stored.
   pub fn extend(&mut self, other: Self) {
     for (service, emotes) in other.emotes {
-      self
-        .emotes
-        .entry(service)
-        .or_insert_with(Vec::new)
-        .extend(emotes);
+      self.emotes.entry(service).or_default().extend(emotes);
     }
   }
 
@@ -116,7 +112,11 @@ mod tests {
       let list = EmoteResponseList::new(ExternalService::SevenTv);
 
       assert!(list.emotes.contains_key(&ExternalService::SevenTv));
-      assert!(list.emotes.get(&ExternalService::SevenTv).unwrap().is_empty());
+      assert!(list
+        .emotes
+        .get(&ExternalService::SevenTv)
+        .unwrap()
+        .is_empty());
     }
   }
 
@@ -201,7 +201,10 @@ mod tests {
       assert_eq!(active_models.len(), 1);
       assert_eq!(active_models[0].external_id, Set("ext_id_123".into()));
       assert_eq!(active_models[0].name, Set("TestEmote".into()));
-      assert_eq!(active_models[0].external_service, Set(ExternalService::SevenTv));
+      assert_eq!(
+        active_models[0].external_service,
+        Set(ExternalService::SevenTv)
+      );
     }
 
     #[test]
