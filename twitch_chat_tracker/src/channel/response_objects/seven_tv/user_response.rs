@@ -1,17 +1,18 @@
-use std::collections::HashMap;
-
-use entities::sea_orm_active_enums::ExternalService;
-
 use crate::channel::response_objects::{
   emote_response::{EmoteResponse, EmoteResponseList},
   seven_tv::emote_response::SevenTvEmoteSet,
 };
+use entities::sea_orm_active_enums::ExternalService;
+use serde_with::{serde_as, DefaultOnNull};
+use std::collections::HashMap;
 
 /// User API response: https://7tv.io/v3/users/twitch/578762718
 ///
 /// Last value in the URL is a user's Twitch ID.
+#[serde_as]
 #[derive(Debug, serde::Deserialize)]
 pub struct SevenTvUserResponse {
+  #[serde_as(deserialize_as = "DefaultOnNull")]
   pub emote_set: SevenTvEmoteSet,
 }
 

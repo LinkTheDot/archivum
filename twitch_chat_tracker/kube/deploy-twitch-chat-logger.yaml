@@ -32,4 +32,4 @@ spec:
             - name: DATABASE_HOST_ADDRESS
               value: "mysql" # resolves to the mysql service running in the cluster
             - name: TRACKED_CHANNELS
-              value: 'fallenshadow, shadowchama, linkthedot, ninaninin, alicesawyer, vividlyvivi, lilyhops, oliviamonroe, inislein, lilyhops, kitanya_is_here, nitya_nil'
+              value: 'fallenshadow, shadowchama, linkthedot, ninaninin, alicesawyer, vividlyvivi, lilyhops, oliviamonroe, inislein, nitya_nil, tenshimishie'
