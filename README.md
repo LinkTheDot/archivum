@@ -33,7 +33,7 @@ clientId: YourClientIdHere
 databaseUsername: YourMySqlDatabaseUsernameHere
 sqlUserPassword: YourSqlUserPasswordHere
 databaseHostAddress: localhost:3306 # This is the default value.
-channels: ["ChannelOneNameHere", "ChannelTwoNameHere"] # Up to 5 are allowed for now.
+channels: ["ChannelOneNameHere", "ChannelTwoNameHere"] # Up to 100 are allowed.
 
 # Optional
 logLevel: Info # Set your actual desired level.
