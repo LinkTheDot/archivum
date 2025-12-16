@@ -1,4 +1,4 @@
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Default)]
 pub struct SevenTvEmoteSet {
   pub emotes: Vec<SevenTvEmote>,
 }
