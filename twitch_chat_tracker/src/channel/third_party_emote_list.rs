@@ -12,6 +12,7 @@ use crate::{
 use app_config::AppConfig;
 use entities::*;
 use entity_extensions::emote::*;
+use reqwest::StatusCode;
 use sea_orm::DatabaseConnection;
 use sea_orm_active_enums::ExternalService;
 use serde_json::Value;
@@ -31,19 +32,19 @@ const FRANKER_FACE_Z_GLOBAL_EMOTE_URL: &str =
 const FRANKER_FACE_Z_USER_EMOTE_URL: &str = "https://api.frankerfacez.com/v1/room/id/";
 
 // -= Global Emote Lists =-
-// https://7tv.io/v3/emote-sets/global
-// https://api.betterttv.net/3/cached/emotes/global
-// https://api.betterttv.net/3/cached/frankerfacez/emotes/global
+// 7TV:  https://7tv.io/v3/emote-sets/global
+// BTTV: https://api.betterttv.net/3/cached/emotes/global
+// FFZ:  https://api.betterttv.net/3/cached/frankerfacez/emotes/global
 //
 // -= User Emote Lists =-
-// https://7tv.io/v3/users/twitch/578762718
-// https://api.betterttv.net/3/cached/users/twitch/578762718
-// https://api.frankerfacez.com/v1/room/id/578762718
+// 7TV:  https://7tv.io/v3/users/twitch/578762718
+// BTTV: https://api.betterttv.net/3/cached/users/twitch/578762718
+// FFZ:  https://api.frankerfacez.com/v1/room/id/578762718
 //
 // -= Fetch Image Urls =-
-// https://cdn.betterttv.net/emote/{id}/3x.webp
-// https://cdn.frankerfacez.com/emote/{id}/4
-// https://cdn.7tv.app/emote/{id}/4x.webp
+// 7TV:  https://cdn.7tv.app/emote/{id}/4x.webp
+// BTTV: https://cdn.betterttv.net/emote/{id}/3x.webp
+// FFZ:  https://cdn.frankerfacez.com/emote/{id}/4
 #[derive(Debug)]
 pub struct EmoteList {
   channel_name: String,
@@ -81,6 +82,44 @@ impl EmoteList {
     })
   }
 
+  pub async fn get_global_list(database_connection: &DatabaseConnection) -> Result<Self, AppError> {
+    let mut global_emotes = EmoteResponseList::default();
+
+    tracing::info!("Fetching global 7TV emotes.");
+    let global_seven_tv_fetch_url =
+      Url::parse(SEVEN_TV_API_URL)?.join(SEVEN_TV_GLOBAL_EMOTE_PATH)?;
+    let global_seven_tv_emotes =
+      Self::get_emote_response::<SevenTvGlobalResponse>(global_seven_tv_fetch_url).await?;
+
+    tracing::info!("Fetching global BTTV emotes.");
+    let global_bttv_fetch_url = Url::parse(BTTV_API_URL)?.join(BTTV_GLOBAL_EMOTE_PATH)?;
+    let global_bttv_emotes =
+      Self::get_emote_response::<BttvGlobalResponse>(global_bttv_fetch_url).await?;
+
+    tracing::info!("Fetching global FrankerFaceZ emotes.");
+    let global_franker_face_z_fetch_url = Url::parse(FRANKER_FACE_Z_GLOBAL_EMOTE_URL)?;
+    let global_franker_face_z_emotes =
+      Self::get_emote_response::<FrankerFaceZGlobalResponse>(global_franker_face_z_fetch_url)
+        .await?;
+
+    global_emotes.extend(global_seven_tv_emotes);
+    global_emotes.extend(global_bttv_emotes);
+    global_emotes.extend(global_franker_face_z_emotes);
+
+    let global_emotes = global_emotes
+      .batch_insert_emotes(database_connection)
+      .await?;
+    let global_emote_map: HashMap<String, emote::Model> = global_emotes
+      .into_iter()
+      .map(|emote| (emote.name.clone(), emote))
+      .collect();
+
+    Ok(Self {
+      channel_name: Self::GLOBAL_NAME.to_string(),
+      emote_list: global_emote_map,
+    })
+  }
+
   /// Returns the `emote_name | Emote` for the channel from 7tv, bttv, and frankerfacez.
   #[allow(unused)]
   async fn get_full_emote_list(
@@ -90,8 +129,12 @@ impl EmoteList {
     let channel_twitch_id = channel.twitch_id.to_string();
 
     let mut emotes = EmoteResponseList::default();
+
+    tracing::info!("Fetching 7TV emotes for `{}`", channel.login_name);
     let seven_tv_emotes = Self::seven_tv_emote_list(channel).await?;
+    tracing::info!("Fetching BTTV emotes for `{}`", channel.login_name);
     let bttv_emotes = Self::bttv_emote_list(channel).await?;
+    tracing::info!("Fetching FrankerFaceZ emotes for `{}`", channel.login_name);
     let franker_face_z_emotes = Self::franker_face_z_emote_list(channel).await?;
 
     emotes.extend(seven_tv_emotes);
@@ -110,63 +153,42 @@ impl EmoteList {
   async fn seven_tv_emote_list(
     channel: &twitch_user::Model,
   ) -> Result<EmoteResponseList, AppError> {
-    let mut seven_tv_emote_list = EmoteResponseList::new(ExternalService::SevenTv);
     let base_url = Url::parse(SEVEN_TV_API_URL)?;
-
-    let global_seven_tv_fetch_url = base_url.join(SEVEN_TV_GLOBAL_EMOTE_PATH)?;
-    let global_seven_tv_emotes =
-      Self::get_emote_response::<SevenTvGlobalResponse>(global_seven_tv_fetch_url).await?;
 
     let user_seven_tv_fetch_url = base_url
       .join(SEVEN_TV_USER_EMOTE_PATH)?
       .join(&channel.twitch_id.to_string())?;
-    let user_seven_tv_emotes =
+    let seven_tv_emote_list =
       Self::get_emote_response::<SevenTvUserResponse>(user_seven_tv_fetch_url).await?;
-
-    seven_tv_emote_list.extend(global_seven_tv_emotes);
-    seven_tv_emote_list.extend(user_seven_tv_emotes);
 
     Ok(seven_tv_emote_list)
   }
 
   async fn bttv_emote_list(channel: &twitch_user::Model) -> Result<EmoteResponseList, AppError> {
-    let mut emote_list = EmoteResponseList::new(ExternalService::Bttv);
     let base_url = Url::parse(BTTV_API_URL)?;
-
-    let global_fetch_url = Url::parse(BTTV_API_URL)?.join(BTTV_GLOBAL_EMOTE_PATH)?;
-    let global_emotes = Self::get_emote_response::<BttvGlobalResponse>(global_fetch_url).await?;
 
     let user_fetch_url = base_url
       .join(BTTV_USER_EMOTE_PATH)?
       .join(&channel.twitch_id.to_string())?;
-    let user_bttv_tv_emotes = Self::get_emote_response::<BttvUserResponse>(user_fetch_url).await?;
+    let bttv_emotes = Self::get_emote_response::<BttvUserResponse>(user_fetch_url).await?;
 
-    emote_list.extend(global_emotes);
-    emote_list.extend(user_bttv_tv_emotes);
-
-    Ok(emote_list)
+    Ok(bttv_emotes)
   }
 
   async fn franker_face_z_emote_list(
     channel: &twitch_user::Model,
   ) -> Result<EmoteResponseList, AppError> {
-    let mut emote_list = EmoteResponseList::new(ExternalService::FrankerFaceZ);
-
-    let global_fetch_url = Url::parse(FRANKER_FACE_Z_GLOBAL_EMOTE_URL)?;
-    let global_emotes =
-      Self::get_emote_response::<FrankerFaceZGlobalResponse>(global_fetch_url).await?;
-
     let user_fetch_url =
       Url::parse(FRANKER_FACE_Z_USER_EMOTE_URL)?.join(&channel.twitch_id.to_string())?;
-    let user_bttv_tv_emotes =
+    let franker_face_z_emotes =
       Self::get_emote_response::<FrankerFaceZUserResponse>(user_fetch_url).await?;
 
-    emote_list.extend(global_emotes);
-    emote_list.extend(user_bttv_tv_emotes);
-
-    Ok(emote_list)
+    Ok(franker_face_z_emotes)
   }
 
+  /// Fetches an emote response from the given URL and builds it into the given type.
+  ///
+  /// Ignores any 404 error and returns an empty list if they occurr.
   async fn get_emote_response<ResponseType>(fetch_url: Url) -> Result<EmoteResponseList, AppError>
   where
     ResponseType: for<'de> serde::Deserialize<'de> + Into<EmoteResponseList>,
@@ -177,10 +199,16 @@ impl EmoteList {
     let status = response.status();
 
     if !status.is_success() {
-      return Err(AppError::FailedResponse {
-        location: "get_third_party_emote_response",
-        code: status.as_u16(),
-      });
+      // Not found implies the user did not setup an account with this service.
+      // We don't care in this case because it means they had no emotes from here anyways.
+      if status == StatusCode::NOT_FOUND {
+        return Ok(EmoteResponseList::default());
+      } else {
+        return Err(AppError::FailedResponse {
+          location: "get_third_party_emote_response",
+          code: status.as_u16(),
+        });
+      }
     }
 
     let response_body = response.text().await?;

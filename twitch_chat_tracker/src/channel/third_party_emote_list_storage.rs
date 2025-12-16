@@ -13,7 +13,7 @@ pub struct EmoteListStorage {
 
 impl EmoteListStorage {
   /// This constant limits how many channels retrieve emote data from third parties at a time.
-  const EMOTE_FETCH_BATCH_LIMIT: usize = 3;
+  const EMOTE_FETCH_BATCH_LIMIT: usize = 4;
 
   /// Generates the list of emotes for each channel in the app config.
   /// Global emotes are under the name [`GLOBAL`](EmoteList::GLOBAL_NAME).
@@ -33,7 +33,7 @@ impl EmoteListStorage {
     let channels =
       twitch_user::Model::get_many_by_identifier(channel_identifiers, database_connection).await?;
 
-    let third_party_emote_lists_results: Vec<Result<(String, EmoteList), AppError>> =
+    let mut third_party_emote_lists_results: Vec<Result<(String, EmoteList), AppError>> =
       stream::iter(channels)
         .map(|channel| async move {
           let channel_login = channel.login_name.clone();
@@ -44,6 +44,9 @@ impl EmoteListStorage {
         .buffer_unordered(Self::EMOTE_FETCH_BATCH_LIMIT)
         .collect::<Vec<_>>()
         .await;
+
+    let global_emote_list = Self::get_global_emote_list(database_connection).await;
+    third_party_emote_lists_results.push(global_emote_list);
 
     let third_party_emote_lists: HashMap<String, EmoteList> = third_party_emote_lists_results
       .into_iter()
@@ -57,6 +60,15 @@ impl EmoteListStorage {
     Ok(Self {
       third_party_emote_lists,
     })
+  }
+
+  async fn get_global_emote_list(
+    database_connection: &DatabaseConnection,
+  ) -> Result<(String, EmoteList), AppError> {
+    Ok((
+      EmoteList::GLOBAL_NAME.to_string(),
+      EmoteList::get_global_list(database_connection).await?,
+    ))
   }
 
   /// Returns the list of emotes stored defined by EmoteList::TEST_EMOTES for every channel under AppConfig::TEST_CHANNELS and EmoteList::GLOBAL_NAME.
