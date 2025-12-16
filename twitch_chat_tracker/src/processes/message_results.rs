@@ -116,7 +116,7 @@ impl MessageCounter {
       self.log_timer = Instant::now();
 
       tracing::info!(
-        "Messages per minute: {}m  | {} in count.",
+        "Messages per minute: {}  | {} in count.",
         messages_per_minute,
         self.total_messages()
       );

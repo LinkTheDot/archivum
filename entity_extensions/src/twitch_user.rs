@@ -1,38 +1,33 @@
-use crate::errors::EntityExtensionError;
 use crate::prelude::*;
+use crate::{
+  errors::EntityExtensionError, twitch_user::response_objects::twitch_users::TwitchUserListResponse,
+};
 use app_config::AppConfig;
 use app_config::secret_string::Secret;
+pub use channel_identifier::*;
 use entities::{
   twitch_user, twitch_user_name_change, twitch_user_unknown_user_association, unknown_user,
 };
 use sea_orm::*;
-use serde_json::Value;
 use strsim::jaro_winkler;
 use url::Url;
 
+pub mod channel_identifier;
+mod get_many_by_identifier;
+mod response_objects;
+
 const HELIX_USER_QUERY_URL: &str = "https://api.twitch.tv/helix/users";
 const JARO_NAME_SIMILARITY_THRESHOLD: f64 = 0.85;
-
-#[derive(Debug, Clone)]
-pub enum ChannelIdentifier<S: AsRef<str>> {
-  Login(S),
-  TwitchID(S),
-}
-
-impl<'a> From<ChannelIdentifier<&'a str>> for &'a str {
-  fn from(value: ChannelIdentifier<&'a str>) -> Self {
-    match value {
-      ChannelIdentifier::Login(s) => s,
-      ChannelIdentifier::TwitchID(s) => s,
-    }
-  }
-}
 
 pub trait TwitchUserExtensions {
   async fn get_by_identifier<S: AsRef<str>>(
     identifier: ChannelIdentifier<S>,
     database_connection: &DatabaseConnection,
   ) -> Result<Option<twitch_user::Model>, EntityExtensionError>;
+  async fn get_many_by_identifier<S: AsRef<str>>(
+    identifiers: Vec<ChannelIdentifier<S>>,
+    database_connection: &DatabaseConnection,
+  ) -> Result<Vec<twitch_user::Model>, EntityExtensionError>;
   async fn get_list_by_incomplete_name<S: AsRef<str> + std::fmt::Debug>(
     identifier: ChannelIdentifier<S>,
     database_connection: &DatabaseConnection,
@@ -85,6 +80,16 @@ impl TwitchUserExtensions for twitch_user::Model {
           .map_err(Into::into)
       }
     }
+  }
+
+  /// Retrieves the list of users from the given identifiers.
+  ///
+  /// Any users not already stored in the database are retrieved from Twitch's API.
+  async fn get_many_by_identifier<S: AsRef<str>>(
+    identifiers: Vec<ChannelIdentifier<S>>,
+    database_connection: &DatabaseConnection,
+  ) -> Result<Vec<twitch_user::Model>, EntityExtensionError> {
+    get_many_by_identifier::get_many_by_identifier(identifiers, database_connection).await
   }
 
   /// Returns the list of users based on an incomplete login.
@@ -253,58 +258,13 @@ impl TwitchUserExtensions for twitch_user::Model {
     let response = request.send().await?;
     let response_body = response.text().await?;
 
-    let Value::Object(response_value) = serde_json::from_str::<Value>(&response_body)? else {
-      return Err(EntityExtensionError::UnknownResponseBody {
-        location: "query channel list",
-        response: response_body.to_owned(),
-      });
-    };
-    let Some(Value::Array(channel_list)) = response_value.get("data") else {
-      return Err(EntityExtensionError::UnknownResponseBody {
-        location: "query channel list internal list",
-        response: response_body.to_owned(),
-      });
-    };
+    let response_list: TwitchUserListResponse = serde_json::from_str(&response_body)?;
 
-    let mut user_list = vec![];
-
-    for channel in channel_list {
-      let Value::Object(channel) = channel else {
-        continue;
-      };
-
-      let Some(Value::String(login_name)) = channel.get("login") else {
-        tracing::error!("Unkown response: {:?}", channel);
-        tracing::error!(
-          "Received an unknown response body structure when querying. Body location: query channel list internal list.",
-        );
-        continue;
-      };
-      let Some(Value::String(display_name)) = channel.get("display_name") else {
-        continue;
-      };
-      let Some(Value::String(user_id)) = channel.get("id") else {
-        continue;
-      };
-      let Ok(user_id) = user_id.parse::<i32>() else {
-        return Err(EntityExtensionError::FailedToParseValue {
-          value_name: "twitch user id",
-          location: "query helix for channels from list",
-          value: user_id.to_string(),
-        });
-      };
-
-      let user = twitch_user::ActiveModel {
-        twitch_id: ActiveValue::Set(user_id),
-        login_name: ActiveValue::Set(login_name.to_owned()),
-        display_name: ActiveValue::Set(display_name.to_owned()),
-        ..Default::default()
-      };
-
-      user_list.push(user);
-    }
-
-    Ok(user_list)
+    response_list
+      .data
+      .into_iter()
+      .map(twitch_user::ActiveModel::try_from)
+      .collect()
   }
 
   /// Takes a guessed name and compares it against all login and display names in the database.
@@ -427,15 +387,6 @@ async fn attempt_insert(
   result.map_err(Into::into)
 }
 
-impl ChannelIdentifier<&str> {
-  pub fn to_owned(&self) -> ChannelIdentifier<String> {
-    match self {
-      Self::Login(login) => ChannelIdentifier::Login((*login).to_owned()),
-      Self::TwitchID(twitch_id) => ChannelIdentifier::TwitchID((*twitch_id).to_owned()),
-    }
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -518,7 +469,7 @@ mod tests {
       .append_query_results([user_models])
       .into_connection();
 
-    let incomplete_login = ChannelIdentifier::Login("svrfkljnsrvbujklnsdtbujkln;dtbujnkl;dbtjnkl");
+    let incomplete_login = ChannelIdentifier::Login("missing_user");
 
     let result =
       twitch_user::Model::get_list_by_incomplete_name(incomplete_login, &mock_database).await;

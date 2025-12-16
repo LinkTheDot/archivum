@@ -13,7 +13,7 @@ pub enum EventType {
   #[sea_orm(string_value = "streamlabs_donation")]
   StreamlabsDonation,
 }
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize, Hash)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "external_service")]
 pub enum ExternalService {
   #[sea_orm(string_value = "twitch")]

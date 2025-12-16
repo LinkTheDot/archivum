@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 pub struct Model {
   #[sea_orm(primary_key)]
   pub id: i32,
-  #[sea_orm(unique)]
   pub external_id: String,
   pub name: String,
   pub external_service: ExternalService,
