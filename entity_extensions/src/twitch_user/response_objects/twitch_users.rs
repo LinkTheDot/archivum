@@ -21,7 +21,7 @@ impl TryFrom<TwitchUserResponse> for twitch_user::ActiveModel {
     let Ok(twitch_id) = user_response.id.parse::<i32>() else {
       return Err(EntityExtensionError::FailedToParseValue {
         value_name: "twitch user id",
-        location: "",
+        location: "try_from_twitch_user_response",
         value: user_response.id.to_string(),
       });
     };

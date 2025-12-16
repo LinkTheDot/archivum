@@ -11,11 +11,9 @@ use crate::{
 };
 use app_config::AppConfig;
 use entities::*;
-use entity_extensions::emote::*;
 use reqwest::StatusCode;
 use sea_orm::DatabaseConnection;
 use sea_orm_active_enums::ExternalService;
-use serde_json::Value;
 use std::collections::HashMap;
 use url::Url;
 
@@ -257,145 +255,6 @@ impl EmoteList {
     });
 
     Some(emote_lists)
-  }
-
-  // The global response body is formatted different from the regular users, so it lives in a separate method.
-  pub async fn get_global_emote_list(
-    database_connection: &DatabaseConnection,
-  ) -> Result<Self, AppError> {
-    let mut _7tv_query_url = Url::parse(SEVEN_TV_API_URL)?;
-    _7tv_query_url = _7tv_query_url.join("emote-sets/global")?;
-    // let _7tv = Self::_7tv_emote_list(client, _7tv_query_url).await?;
-    let reqwest_client = reqwest::Client::new();
-
-    let response = reqwest_client.get(_7tv_query_url).send().await?;
-    let response_body = response.text().await?;
-
-    if response_body.contains("error code: ") {
-      return Err(AppError::FailedToQuery7TVForEmoteList(response_body));
-    }
-
-    let Value::Object(data) = serde_json::from_str(&response_body)? else {
-      tracing::error!("Unkown response: {:?}", response_body);
-
-      return Err(AppError::UnknownResponseBody(
-        "global data from 7tv response body.",
-      ));
-    };
-
-    if let Some(Value::Number(error_code)) = data.get("error_code") {
-      if error_code.as_u64() == Some(12000) {
-        return Ok(Self {
-          channel_name: Self::GLOBAL_NAME.to_string(),
-          emote_list: HashMap::default(),
-        });
-      }
-    }
-
-    let Some(Value::Array(emote_set)) = data.get("emotes") else {
-      tracing::error!("Unkown response: {:?}", response_body);
-
-      return Err(AppError::UnknownResponseBody(
-        "global emote set from 7tv response body.",
-      ));
-    };
-
-    let mut emote_list: HashMap<String, emote::Model> = HashMap::new();
-
-    for emote_object in emote_set {
-      let Value::Object(emote_object_map) = emote_object else {
-        continue;
-      };
-      let Some(Value::String(emote_name)) = emote_object_map.get("name") else {
-        continue;
-      };
-      let Some(Value::String(emote_id)) = emote_object_map.get("id") else {
-        continue;
-      };
-
-      let emote = emote::Model::get_or_set_third_party_emote_by_external_id(
-        emote_id,
-        emote_name,
-        ExternalService::SevenTv,
-        database_connection,
-      )
-      .await?;
-
-      emote_list.insert(emote_name.to_owned(), emote);
-    }
-
-    Ok(Self {
-      channel_name: Self::GLOBAL_NAME.to_string(),
-      emote_list,
-    })
-  }
-
-  async fn _7tv_emote_list(
-    query_url: Url,
-    database_connection: &DatabaseConnection,
-  ) -> Result<HashMap<String, emote::Model>, AppError> {
-    let reqwest_client = reqwest::Client::new();
-    let response = reqwest_client.get(query_url).send().await?;
-    let response_body = response.text().await?;
-
-    if response_body.contains("error code: ") {
-      return Err(AppError::FailedToQuery7TVForEmoteList(response_body));
-    }
-
-    let Value::Object(data) = serde_json::from_str(&response_body)? else {
-      tracing::error!("Unkown response: {:?}", response_body);
-
-      return Err(AppError::UnknownResponseBody(
-        "data from 7tv response body.",
-      ));
-    };
-
-    if let Some(Value::Number(error_code)) = data.get("error_code") {
-      if error_code.as_u64() == Some(12000) {
-        return Ok(HashMap::default());
-      }
-    }
-
-    let Some(Value::Object(emote_set)) = data.get("emote_set") else {
-      tracing::error!("Unkown response: {:?}", response_body);
-
-      return Err(AppError::UnknownResponseBody(
-        "emote set from 7tv response body.",
-      ));
-    };
-    let Some(Value::Array(emote_set)) = emote_set.get("emotes") else {
-      tracing::error!("Unkown response: {:?}", response_body);
-
-      return Err(AppError::UnknownResponseBody(
-        "emote array from 7tv response body.",
-      ));
-    };
-
-    let mut emotes: HashMap<String, emote::Model> = HashMap::new();
-
-    for emote_object in emote_set {
-      let Value::Object(emote_object_map) = emote_object else {
-        continue;
-      };
-      let Some(Value::String(emote_name)) = emote_object_map.get("name") else {
-        continue;
-      };
-      let Some(Value::String(emote_id)) = emote_object_map.get("id") else {
-        continue;
-      };
-
-      let emote = emote::Model::get_or_set_third_party_emote_by_external_id(
-        emote_id,
-        emote_name,
-        ExternalService::SevenTv,
-        database_connection,
-      )
-      .await?;
-
-      emotes.insert(emote_name.to_owned(), emote);
-    }
-
-    Ok(emotes)
   }
 
   /// Returns the combined list of 7tv, bttv, and frankerfacez emotes.
