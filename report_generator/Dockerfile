@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release/report_generator /app/
 COPY --from=builder /app/config_files/deploy_config.yml /app/config_files/deploy_config.yml
+COPY --from=builder /app/report_generator/template_files /app/template_files
 
 WORKDIR /app
 

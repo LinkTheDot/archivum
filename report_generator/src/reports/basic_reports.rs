@@ -47,15 +47,15 @@ async fn get_baseline_reports(
 
   template_renderer.add_context(ChatStatistics::NAME, &general_chat_statistics);
   template_renderer
-    .add_template_from_file(
+    .add_template_from_template_file_name(
       "general_stats",
-      "report_generator/template_files/general_chat_stats",
+      "general_chat_stats",
     )
     .await?;
   template_renderer
-    .add_template_from_file(
+    .add_template_from_template_file_name(
       "donation_stats",
-      "report_generator/template_files/donation_stats",
+      "donation_stats",
     )
     .await?;
 
@@ -139,7 +139,12 @@ async fn get_conditional_reports(
 
   let date_start = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
   let date_start = Utc.from_utc_datetime(&date_start.and_hms_opt(0, 0, 0).unwrap());
-  let date_end = NaiveDate::from_ymd_opt(year, month + 1, 1).unwrap();
+  let (end_year, end_month) = if month == 12 {
+    (year + 1, 1)
+  } else {
+    (year, month + 1)
+  };
+  let date_end = NaiveDate::from_ymd_opt(end_year, end_month, 1).unwrap();
   let date_end = Utc.from_utc_datetime(&date_end.and_hms_opt(0, 0, 0).unwrap());
 
   let donator_monthly_rankings_result =

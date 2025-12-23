@@ -1,5 +1,6 @@
-use crate::errors::AppError;
-use std::{collections::HashSet, path::Path};
+use crate::{clap::Args, errors::AppError};
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 
 #[derive(Debug)]
@@ -64,6 +65,26 @@ impl TemplateRenderer {
     template_name: &'static str,
     template_path: P,
   ) -> Result<(), AppError> {
+    let template_file_contents = fs::read_to_string(template_path).await?;
+
+    self.add_template(template_name, &template_file_contents)
+  }
+
+  /// Adds the template for the given template file name defined in the template file directory.
+  ///
+  /// The default directory is "report_generator/template_files", but can be changed with the `--template-dir-path` flag.
+  pub async fn add_template_from_template_file_name(
+    &mut self,
+    template_name: &'static str,
+    template_file_name: &str,
+  ) -> Result<(), AppError> {
+    let template_path = {
+      let mut template_path = PathBuf::from(Args::template_dir_path());
+      template_path.push(template_file_name);
+
+      template_path
+    };
+
     let template_file_contents = fs::read_to_string(template_path).await?;
 
     self.add_template(template_name, &template_file_contents)

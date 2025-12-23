@@ -1,8 +1,7 @@
+use crate::reports::chosen_report::ChosenReport;
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::Parser;
 use std::sync::OnceLock;
-
-use crate::reports::chosen_report::ChosenReport;
 
 static ARGS: OnceLock<Args> = OnceLock::new();
 
@@ -46,6 +45,9 @@ pub struct Args {
   subathon_start_date: Option<DateTime<Utc>>,
   #[arg(long, value_parser = parse_date)]
   subathon_end_date: Option<DateTime<Utc>>,
+
+  #[arg(long, default_value = "report_generator/template_files")]
+  template_dir_path: String,
 }
 
 impl Args {
@@ -96,11 +98,15 @@ impl Args {
   pub fn subathon_end_date() -> Option<&'static DateTime<Utc>> {
     Self::get_or_set().subathon_end_date.as_ref()
   }
+
+  pub fn template_dir_path() -> &'static str {
+    &Self::get_or_set().template_dir_path
+  }
 }
 
 /// Custom parser for to convert "yyyy-mm-dd" string to DateTime<Utc> at midnight.
-fn parse_date(s: &str) -> Result<DateTime<Utc>, String> {
-  NaiveDate::parse_from_str(s, "%Y-%m-%d")
+fn parse_date(date: &str) -> Result<DateTime<Utc>, String> {
+  NaiveDate::parse_from_str(date, "%Y-%m-%d")
     .map(|date| date.and_hms_opt(0, 0, 0).unwrap().and_utc())
-    .map_err(|e| e.to_string())
+    .map_err(|error| error.to_string())
 }
