@@ -1,11 +1,6 @@
 use crate::{
   channel::response_objects::{
-    bttv::{global_response::BttvGlobalResponse, user_response::BttvUserResponse},
-    emote_response::EmoteResponseList,
-    franker_face_z::{
-      global_response::FrankerFaceZGlobalResponse, user_response::FrankerFaceZUserResponse,
-    },
-    seven_tv::{global_response::SevenTvGlobalResponse, user_response::SevenTvUserResponse},
+    bttv::*, emote_response::EmoteResponseList, franker_face_z::*, seven_tv::*,
   },
   errors::AppError,
 };

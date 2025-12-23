@@ -25,7 +25,11 @@ spec:
             - name: DATABASE_HOST_ADDRESS
               value: "mysql"
           args:
+            - "--chosen-report"
+            - "basic"
             - "-n"
             - "fallenshadow"
+            - "--template-dir-path"
+            - "template_files/"
       restartPolicy: Never
 
