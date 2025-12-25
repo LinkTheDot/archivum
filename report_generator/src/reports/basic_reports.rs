@@ -71,7 +71,7 @@ async fn get_baseline_reports(
   let monthly_rendered_chat_statistics = template_renderer.render("general_stats")?;
   let monthly_rendered_donation_statistics = template_renderer.render("donation_stats")?;
   let monthly_top_emotes_table =
-    get_top_n_emotes_table(&query_conditions, database_connection, Some(15)).await?;
+    get_top_n_emotes_table(monthly_conditions, database_connection, Some(15)).await?;
 
   let general_stats_report = Report::build_report_from_list(
     "general_stats",
@@ -84,7 +84,7 @@ async fn get_baseline_reports(
     REPORT_SECTION_SEPARATION,
   );
   let monthly_general_stats_report = Report::build_report_from_list(
-    "general_stats",
+    "monthly_general_stats",
     &[&monthly_top_emotes_table, &monthly_rendered_chat_statistics],
     REPORT_SECTION_SEPARATION,
   );
