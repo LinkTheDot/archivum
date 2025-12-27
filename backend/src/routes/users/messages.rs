@@ -60,6 +60,7 @@ pub async fn get_messages(
 
   let user_messages_dtos =
     StreamMessageDto::convert_messages(user_messages, database_connection).await?;
+
   let ItemsAndPagesNumber {
     number_of_items,
     number_of_pages,
