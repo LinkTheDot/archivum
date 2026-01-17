@@ -1,0 +1,10 @@
+[package]
+name = "benchmarking_tools"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.49", features = ["test-util"] }
+dashmap = "6.1"
+human-time = "0.1"
+tracing = "0.1"

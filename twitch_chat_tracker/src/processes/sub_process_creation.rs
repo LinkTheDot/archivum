@@ -1,5 +1,6 @@
 use crate::channel::tracked_channels::TrackedChannels;
 use crate::errors::AppError;
+use crate::processes::print_benchmarking;
 use crate::processes::update_channel_livestreams::update_channel_live_streams;
 use crate::processes::{app_animation::run_animation, process_irc_message_results};
 use database_connection::get_database_connection;
@@ -18,6 +19,7 @@ pub async fn create_sub_processes() -> mpsc::UnboundedSender<JoinHandle<Result<b
   tokio::spawn(run_animation());
   tokio::spawn(update_channel_live_streams(connected_channels));
   tokio::spawn(process_irc_message_results(irc_message_processing_receiver));
+  tokio::spawn(print_benchmarking());
 
   irc_message_processing_sender
 }

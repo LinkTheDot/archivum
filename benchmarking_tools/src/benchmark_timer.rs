@@ -1,4 +1,4 @@
-use crate::benchmarking::{
+use crate::{
   benchmark_name::BenchmarkName, benchmark_times::BenchmarkTimes,
   running_benchmark_timer::RunningBenchmarkTimer,
 };

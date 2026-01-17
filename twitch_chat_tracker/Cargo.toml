@@ -8,6 +8,7 @@ app_config = { path = "../app_config" }
 database_connection = { path = "../database_connection" }
 entities = { path = "../entities" }
 entity_extensions = { path = "../entity_extensions" }
+benchmarking_tools = { path = "../benchmarking_tools" }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 serde = { version = "1.0", features = ["derive"] }
@@ -29,6 +30,7 @@ futures = { version = "0.3", features = [] }
 regex = "1.11"
 human-time = "0.1"
 dashmap = "6.1"
+clap = "4.5"
 
 [dev-dependencies]
 entity_extensions = { path = "../entity_extensions", features = ["__test_hook"] }
