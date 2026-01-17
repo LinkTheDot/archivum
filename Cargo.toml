@@ -10,5 +10,6 @@ members = [
   "nightly_checks",
   "backend", 
   "spanix_scrubber", 
+  "benchmarking_tools", 
 ]
 resolver = "3"

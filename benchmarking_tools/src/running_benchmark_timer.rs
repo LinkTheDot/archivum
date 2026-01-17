@@ -1,4 +1,4 @@
-use crate::benchmarking::benchmark_name::BenchmarkName;
+use crate::benchmark_name::BenchmarkName;
 use std::time::{Duration, Instant};
 
 #[derive(Debug)]

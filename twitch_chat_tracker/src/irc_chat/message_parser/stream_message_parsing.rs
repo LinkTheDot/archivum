@@ -56,19 +56,35 @@ impl<'a> MessageParser<'a> {
         location: "user message parsing",
       });
     };
+    let Some(sender_display_name) = self.message.display_name() else {
+      return Err(AppError::MissingExpectedValue {
+        expected_value_name: "display name",
+        location: "user message parsing",
+      });
+    };
+    // Twitch doesn't send the login name if it matches the display name.
+    let sender_login_name = self.message.login_name().unwrap_or(sender_display_name);
     let Some(streamer_twitch_id) = self.message.room_id() else {
       return Err(AppError::MissingExpectedValue {
         expected_value_name: "room id",
         location: "user message parsing",
       });
     };
+
     let streamer_twitch_user_model =
       twitch_user::Model::get_or_set_by_twitch_id(streamer_twitch_id, database_connection).await?;
+
     let maybe_stream =
       stream::Model::get_active_stream_for_user(&streamer_twitch_user_model, database_connection)
         .await?;
-    let sender_twitch_user_model =
-      twitch_user::Model::get_or_set_by_twitch_id(sender_twitch_id, database_connection).await?;
+
+    let sender_twitch_user_model = twitch_user::Model::get_by_twitch_id_or_initialize_with_names(
+      sender_twitch_id,
+      sender_login_name,
+      sender_display_name,
+      database_connection,
+    )
+    .await?;
 
     let message_active_model = stream_message::ActiveModel {
       is_first_message: Set(self.message.is_first_message() as i8),

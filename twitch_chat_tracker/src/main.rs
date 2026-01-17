@@ -4,6 +4,8 @@ use app_config::AppConfig;
 // Other Glorp ass: https://cdn.discordapp.com/emojis/1333507652591947847.webp?size=44&animated=true
 // Glorp pirate: https://cdn.discordapp.com/emojis/1335429586594562058.webp?size=44
 // Glorp Sit: https://cdn.discordapp.com/emojis/1338372384578863158.webp?size=44
+//
+// Rusting the glorpass: https://discord.com/channels/1444446454902034565/1444446867298582691/1454938742686220534
 
 mod manual_migrations;
 

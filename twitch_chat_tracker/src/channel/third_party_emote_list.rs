@@ -134,7 +134,14 @@ impl EmoteList {
     emotes.extend(bttv_emotes);
     emotes.extend(franker_face_z_emotes);
 
-    let emotes = emotes.batch_insert_emotes(database_connection).await?;
+    let emotes = match emotes.batch_insert_emotes(database_connection).await {
+      Ok(emotes) => emotes,
+      Err(error) => {
+        tracing::error!("Failed to instert emotes for channel: {channel:?}");
+
+        return Err(error);
+      }
+    };
     let emote_map: HashMap<String, emote::Model> = emotes
       .into_iter()
       .map(|emote| (emote.name.clone(), emote))

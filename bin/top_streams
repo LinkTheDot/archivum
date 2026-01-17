@@ -1,0 +1,30 @@
+#!/usr/bin/env zsh
+
+URL="https://api.twitch.tv/helix/streams"
+COUNT=80
+NAMES=()
+CURSOR=""
+
+while [ ${#NAMES[@]} -lt $COUNT ]; do
+    if [ -n "$CURSOR" ]; then
+        RESPONSE=$(curl -s -X GET "${URL}?after=${CURSOR}" \
+            -H "Authorization: Bearer ${AUTH_TOKEN}" \
+            -H "Client-Id: ${CLIENT_ID}")
+    else
+        RESPONSE=$(curl -s -X GET "$URL" \
+            -H "Authorization: Bearer ${AUTH_TOKEN}" \
+            -H "Client-Id: ${CLIENT_ID}")
+    fi
+    
+    BATCH=$(echo "$RESPONSE" | jq -c '[.data[].user_login]')
+    
+    for name in $(echo "$BATCH" | jq -r '.[]'); do
+        [ ${#NAMES[@]} -ge $COUNT ] && break
+        NAMES+=("$name")
+    done
+    
+    CURSOR=$(echo "$RESPONSE" | jq -r '.pagination.cursor // empty')
+    [ -z "$CURSOR" ] && break
+done
+
+jq -nc --args '$ARGS.positional' --args -- "${NAMES[@]}"

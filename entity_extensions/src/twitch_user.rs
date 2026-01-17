@@ -40,6 +40,12 @@ pub trait TwitchUserExtensions {
     twitch_id: &str,
     database_connection: &DatabaseConnection,
   ) -> Result<twitch_user::Model, EntityExtensionError>;
+  async fn get_by_twitch_id_or_initialize_with_names(
+    twitch_id: &str,
+    login_name: &str,
+    display_name: &str,
+    database_connection: &DatabaseConnection,
+  ) -> Result<twitch_user::Model, EntityExtensionError>;
   /// Queries Helix for every user passed in.
   async fn query_helix_for_channels_from_list<S: AsRef<str>>(
     channels: &[ChannelIdentifier<S>],
@@ -216,6 +222,39 @@ impl TwitchUserExtensions for twitch_user::Model {
     attempt_insert(helix_channel, database_connection).await
   }
 
+  async fn get_by_twitch_id_or_initialize_with_names(
+    twitch_id: &str,
+    login_name: &str,
+    display_name: &str,
+    database_connection: &DatabaseConnection,
+  ) -> Result<twitch_user::Model, EntityExtensionError> {
+    let user_model = twitch_user::Entity::find()
+      .filter(twitch_user::Column::TwitchId.eq(twitch_id))
+      .one(database_connection)
+      .await?;
+
+    if let Some(user_model) = user_model {
+      return Ok(user_model);
+    }
+
+    let Ok(twitch_id) = twitch_id.parse::<i32>() else {
+      return Err(EntityExtensionError::FailedToParseValue {
+        value_name: "twitch id",
+        location: "get_by_twitch_id_or_initialize_with_names",
+        value: twitch_id.to_owned(),
+      });
+    };
+
+    let user = twitch_user::ActiveModel {
+      twitch_id: Set(twitch_id),
+      login_name: Set(login_name.to_string()),
+      display_name: Set(display_name.to_string()),
+      ..Default::default()
+    };
+
+    attempt_insert(user, database_connection).await
+  }
+
   async fn query_helix_for_channels_from_list<S: AsRef<str>>(
     channels: &[ChannelIdentifier<S>],
   ) -> Result<Vec<twitch_user::ActiveModel>, EntityExtensionError> {
@@ -352,17 +391,17 @@ async fn check_for_name_change(
 ///
 /// If there is a unique constraint violation, attempts to get the user again and returns the value.
 async fn attempt_insert(
-  helix_channel: twitch_user::ActiveModel,
+  channel: twitch_user::ActiveModel,
   database_connection: &DatabaseConnection,
 ) -> Result<twitch_user::Model, EntityExtensionError> {
-  let ActiveValue::Set(twitch_id) = helix_channel.twitch_id else {
+  let ActiveValue::Set(twitch_id) = channel.twitch_id else {
     return Err(EntityExtensionError::FailedToGetValue {
       value_name: "twitch id",
       location: "attempt insert",
-      additional_data: format!("{:?}", helix_channel),
+      additional_data: format!("{:?}", channel),
     });
   };
-  let result = helix_channel.insert(database_connection).await;
+  let result = channel.insert(database_connection).await;
 
   // Checking if there was a race condition where another process is inserting at the same time.
   if let Err(error) = &result
