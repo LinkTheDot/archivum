@@ -13,7 +13,7 @@ pub struct EmoteListStorage {
 
 impl EmoteListStorage {
   /// This constant limits how many channels retrieve emote data from third parties at a time.
-  const CHANNEL_FETCH_EMOTE_BATCH_LIMIT: usize = 4;
+  const CHANNEL_FETCH_EMOTE_BATCH_LIMIT: usize = 2;
 
   /// Generates the list of emotes for each channel in the app config.
   /// Global emotes are under the name [`GLOBAL`](EmoteList::GLOBAL_NAME).

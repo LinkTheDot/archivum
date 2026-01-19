@@ -1,5 +1,5 @@
-use benchmarking_tools::BenchmarkTimer;
 use crate::clap::Args;
+use benchmarking_tools::BenchmarkTimer;
 use std::time::Duration;
 
 const PRINT_INTERVAL: Duration = Duration::new(60, 0);

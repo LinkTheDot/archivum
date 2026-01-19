@@ -34,7 +34,7 @@
 //!   loop {
 //!     tracing::info!("-= Logging benchmark data =-");
 //!     BenchmarkTimer::print_benchmark_data();
-//! 
+//!
 //!     tokio::time::sleep(PRINT_INTERVAL).await;
 //!   }
 //! }
