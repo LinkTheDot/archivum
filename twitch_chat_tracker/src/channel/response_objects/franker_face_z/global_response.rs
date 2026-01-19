@@ -79,7 +79,10 @@ mod tests {
     let response: FrankerFaceZGlobalResponse = serde_json::from_str(json).unwrap();
     let emote_list: EmoteResponseList = response.into();
 
-    let emotes = emote_list.emotes.get(&ExternalService::FrankerFaceZ).unwrap();
+    let emotes = emote_list
+      .emotes
+      .get(&ExternalService::FrankerFaceZ)
+      .unwrap();
     assert_eq!(emotes.len(), 2);
     assert_eq!(emotes[0].id, "123");
     assert_eq!(emotes[0].name, "TestEmote");
@@ -93,7 +96,9 @@ mod tests {
     let response: FrankerFaceZGlobalResponse = serde_json::from_str(json).unwrap();
     let emote_list: EmoteResponseList = response.into();
 
-    assert!(emote_list.emotes.contains_key(&ExternalService::FrankerFaceZ));
+    assert!(emote_list
+      .emotes
+      .contains_key(&ExternalService::FrankerFaceZ));
     assert_eq!(emote_list.emotes.len(), 1);
   }
 

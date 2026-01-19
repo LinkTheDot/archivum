@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use entities::sea_orm_active_enums::ExternalService;
 use crate::channel::response_objects::{
   emote_response::{EmoteResponse, EmoteResponseList},
   seven_tv::emote_response::*,
 };
+use entities::sea_orm_active_enums::ExternalService;
+use std::collections::HashMap;
 
 /// Global API response: https://7tv.io/v3/emote-sets/global
 #[derive(Debug, serde::Deserialize)]

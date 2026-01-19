@@ -1,8 +1,8 @@
 use super::*;
 use crate::errors::EntityExtensionError;
 use entities::twitch_user;
-use sea_orm::sea_query::OnConflict;
 use helix_client::*;
+use sea_orm::sea_query::OnConflict;
 
 mod helix_client;
 
@@ -145,9 +145,9 @@ async fn insert_missing_users_from_helix<C: HelixClient>(
 
 #[cfg(test)]
 mod tests {
+  use super::helix_client::test_utils::*;
   use super::*;
   use sea_orm::{ActiveValue, DatabaseBackend, MockDatabase, MockExecResult};
-  use super::helix_client::test_utils::*;
 
   #[tokio::test]
   async fn test_get_many_returns_existing_users() {

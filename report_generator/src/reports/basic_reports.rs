@@ -47,16 +47,10 @@ async fn get_baseline_reports(
 
   template_renderer.add_context(ChatStatistics::NAME, &general_chat_statistics);
   template_renderer
-    .add_template_from_template_file_name(
-      "general_stats",
-      "general_chat_stats",
-    )
+    .add_template_from_template_file_name("general_stats", "general_chat_stats")
     .await?;
   template_renderer
-    .add_template_from_template_file_name(
-      "donation_stats",
-      "donation_stats",
-    )
+    .add_template_from_template_file_name("donation_stats", "donation_stats")
     .await?;
 
   let rendered_chat_statistics = template_renderer.render("general_stats")?;
