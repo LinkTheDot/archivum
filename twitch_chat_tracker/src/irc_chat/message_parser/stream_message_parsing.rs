@@ -14,6 +14,10 @@ impl<'a> MessageParser<'a> {
     &self,
     database_connection: &DatabaseConnection,
   ) -> Result<(), AppError> {
+    if self.is_subscription_without_message() {
+      return Ok(());
+    }
+
     let parsed_stream_message = self
       .parse_message_contents(database_connection)
       .await?
@@ -44,12 +48,9 @@ impl<'a> MessageParser<'a> {
     }
 
     let emotes = self.message.emotes().unwrap_or("");
-    let Command::PRIVMSG(_, message_contents) = self.message.command() else {
-      return Err(AppError::IncorrectCommandWhenParsingMessage {
-        location: "user message parser",
-        command_string: format!("{:?}", self.message.command()),
-      });
-    };
+    let message_command = self.message.command();
+    let message_contents = Self::get_message_contents(message_command)?;
+    let is_subscription_message = self.message.message_type() == TwitchMessageType::Subscription;
     let Some(sender_twitch_id) = self.message.user_id() else {
       return Err(AppError::MissingExpectedValue {
         expected_value_name: "user id",
@@ -96,6 +97,7 @@ impl<'a> MessageParser<'a> {
       stream_id: Set(maybe_stream.map(|stream| stream.id)),
       is_subscriber: Set(self.message.is_subscriber() as i8),
       origin_id: Set(self.message.message_source_id().map(str::to_owned)),
+      is_from_subscription_message: Set(is_subscription_message as i8),
       ..Default::default()
     };
 
@@ -103,6 +105,26 @@ impl<'a> MessageParser<'a> {
       ParsedStreamMessage::new(message_active_model, emotes, streamer_twitch_user_model);
 
     Ok(parsed_stream_message)
+  }
+
+  fn get_message_contents(message_command: &Command) -> Result<&String, AppError> {
+    match message_command {
+      Command::PRIVMSG(_, message_contents) => Ok(message_contents),
+      Command::Raw(_, contents) => {
+        let Some(message_contents) = contents.get(1) else {
+          return Err(AppError::IncorrectCommandWhenParsingMessage {
+            location: "user message parser get_message_contents Raw",
+            command_string: format!("{:?}", message_command),
+          });
+        };
+
+        Ok(message_contents)
+      }
+      _ => Err(AppError::IncorrectCommandWhenParsingMessage {
+        location: "user message parser get_message_contents Other",
+        command_string: format!("{:?}", message_command),
+      }),
+    }
   }
 }
 
@@ -224,6 +246,7 @@ mod tests {
         stream_id: None,
         is_subscriber: 1_i8,
         origin_id: Some("159ba37c-c6aa-4fdd-bc62-c5fadbab0770".into()),
+        is_from_subscription_message: 0_i8,
       }]])
       .append_exec_results([MockExecResult {
         last_insert_id: 1,

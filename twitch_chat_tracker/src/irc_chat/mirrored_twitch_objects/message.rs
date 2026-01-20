@@ -133,6 +133,7 @@ impl TwitchIrcMessage {
     [
       TwitchMessageType::UserMessage,
       TwitchMessageType::Bits,
+      TwitchMessageType::Subscription,
       TwitchMessageType::StreamlabsDonation,
     ]
     .contains(&self.message_type)

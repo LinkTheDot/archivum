@@ -19,6 +19,7 @@ pub struct Model {
   pub is_subscriber: i8,
   #[sea_orm(unique)]
   pub origin_id: Option<String>,
+  pub is_from_subscription_message: i8,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

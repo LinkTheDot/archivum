@@ -14,6 +14,7 @@ pub fn generate_message(message_id: i32, user_id: i32, contents: &str) -> stream
     stream_id: None,
     is_subscriber: 1_i8,
     origin_id: Some("0".into()),
+    is_from_subscription_message: 0_i8,
   }
 }
 

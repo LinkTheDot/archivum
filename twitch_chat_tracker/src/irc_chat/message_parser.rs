@@ -2,7 +2,7 @@ use super::mirrored_twitch_objects::message::TwitchIrcMessage;
 use super::mirrored_twitch_objects::twitch_message_type::TwitchMessageType;
 use crate::channel::third_party_emote_list_storage::EmoteListStorage;
 use crate::errors::AppError;
-use irc::proto::Message as IrcMessage;
+use irc::proto::{Command, Message as IrcMessage};
 use sea_orm::*;
 
 mod bits_message_parsing;
@@ -83,6 +83,20 @@ impl<'a> MessageParser<'a> {
 
     Ok(())
   }
+
+  /// Checks if the message was a subscription but doesn't contain an actual message from the user.
+  fn is_subscription_without_message(&self) -> bool {
+    if self.message.message_type() != TwitchMessageType::Subscription {
+      return false;
+    }
+
+    let message_command = self.message.command();
+    let Command::Raw(_, message_contents) = message_command else {
+      return false;
+    };
+
+    message_contents.len() <= 1
+  }
 }
 
 #[cfg(test)]
@@ -160,6 +174,7 @@ mod tests {
         stream_id: None,
         is_subscriber: 1_i8,
         origin_id: None,
+        is_from_subscription_message: 0_i8,
       }]])
       .append_exec_results([MockExecResult {
         last_insert_id: 1,
