@@ -161,6 +161,7 @@ impl TwitchIrc {
 
       return Ok(());
     };
+
     let third_party_emote_lists = self.third_party_emote_lists.clone();
     tracing::debug!("Getting lock on database connection manager.");
     let database_connection_manager = self.database_connection_manager.clone();

@@ -31,6 +31,7 @@ mod m20251109_005842_add_additional_stream_table_data;
 mod m20251212_220834_add_unique_constraint_to_emote_id_and_service_type;
 mod m20251225_060927_add_stream_message_composite_index;
 mod m20260119_032412_add_is_subscription_column_to_stream_messages;
+mod m20260129_060402_scrubbed_user_messages_table;
 
 pub struct Migrator;
 
@@ -69,6 +70,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20251212_220834_add_unique_constraint_to_emote_id_and_service_type::Migration),
             Box::new(m20251225_060927_add_stream_message_composite_index::Migration),
             Box::new(m20260119_032412_add_is_subscription_column_to_stream_messages::Migration),
+            Box::new(m20260129_060402_scrubbed_user_messages_table::Migration),
         ]
   }
 }
