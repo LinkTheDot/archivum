@@ -12,13 +12,6 @@ impl MigrationTrait for Migration {
           .table(ScrubbedUserMessages::Table)
           .if_not_exists()
           .col(
-            ColumnDef::new(ScrubbedUserMessages::Id)
-              .integer()
-              .not_null()
-              .primary_key()
-              .auto_increment(),
-          )
-          .col(
             ColumnDef::new(ScrubbedUserMessages::CreatedAt)
               .timestamp()
               .not_null()
@@ -30,9 +23,20 @@ impl MigrationTrait for Migration {
               .not_null(),
           )
           .col(
-            ColumnDef::new(ScrubbedUserMessages::ScrubbedYearMonth)
-              .date()
+            ColumnDef::new(ScrubbedUserMessages::ChannelId)
+              .integer()
               .not_null(),
+          )
+          .col(
+            ColumnDef::new(ScrubbedUserMessages::CompletedSuccessfully)
+              .boolean()
+              .default(false)
+              .not_null(),
+          )
+          .primary_key(
+            Index::create()
+              .col(ScrubbedUserMessages::TwitchUserId)
+              .col(ScrubbedUserMessages::ChannelId),
           )
           .foreign_key(
             ForeignKey::create()
@@ -44,28 +48,6 @@ impl MigrationTrait for Migration {
               .to(TwitchUser::Table, TwitchUser::Id)
               .on_delete(ForeignKeyAction::Cascade),
           )
-          .to_owned(),
-      )
-      .await?;
-
-    manager
-      .create_index(
-        Index::create()
-          .name("idx-scrubbed_user_messages-twitch_user_id-scrubbed_year_month")
-          .table(ScrubbedUserMessages::Table)
-          .col(ScrubbedUserMessages::TwitchUserId)
-          .col(ScrubbedUserMessages::ScrubbedYearMonth)
-          .unique()
-          .to_owned(),
-      )
-      .await?;
-
-    manager
-      .create_index(
-        Index::create()
-          .name("idx-scrubbed_user_messages-scrubbed_year_month")
-          .table(ScrubbedUserMessages::Table)
-          .col(ScrubbedUserMessages::ScrubbedYearMonth)
           .to_owned(),
       )
       .await
@@ -81,10 +63,10 @@ impl MigrationTrait for Migration {
 #[derive(Iden)]
 enum ScrubbedUserMessages {
   Table,
-  Id,
   CreatedAt,
   TwitchUserId,
-  ScrubbedYearMonth,
+  ChannelId,
+  CompletedSuccessfully,
 }
 
 #[derive(Iden)]

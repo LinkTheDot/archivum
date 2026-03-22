@@ -16,7 +16,7 @@ const LOGIN_NAME_TAG: &str = "login";
 impl SpanixScrubberConfig {
   pub async fn insert_user_messages_into_database(self, data_set: &str) -> ! {
     let third_party_emote_list = EmoteListStorage::new(
-      std::slice::from_ref(&self.channel_login),
+      std::slice::from_ref(&self.channel.login_name),
       self.database_connection,
     )
     .await

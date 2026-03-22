@@ -19,6 +19,9 @@ async fn main() {
     std::process::exit(1);
   }
 
+  // use crate::manual_migrations::mark_scrubbed_users::mark_scrubbed_users_for_channel;
+  // mark_scrubbed_users_for_channel(1).await;
+
   tracing::info!("Tracking channels {:?}", AppConfig::channels());
 
   let message_result_processor_sender =

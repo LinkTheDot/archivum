@@ -8,6 +8,7 @@ pub mod emote;
 pub mod emote_usage;
 pub mod errors;
 pub mod external_service;
+pub mod scrubbed_user_messages;
 pub mod stream;
 pub mod stream_message;
 pub mod twitch_user;
