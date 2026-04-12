@@ -1,8 +1,8 @@
 #![allow(unused)]
 
-use std::collections::HashSet;
 use crate::config::SpanixScrubberConfig;
-use crate::message_scraper::past_user_names::UserName;
+use crate::message_scraper::past_user_names::*;
+use crate::message_scraper::username::*;
 use crate::response_models::avaiable_logs::{AvailableLogs, LogEntry};
 use crate::response_models::user_messages::UserMessages;
 use crate::shutdown_request::ShutdownSignal;
@@ -12,12 +12,17 @@ use entity_extensions::prelude::*;
 use irc::proto::{Message as IrcMessage, message::Tag as IrcTag};
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::Query;
+use sea_orm::sqlx::types::chrono::{DateTime, Utc};
 use sea_orm::*;
+use std::collections::HashSet;
+use twitch_chat_tracker::channel::third_party_emote_list;
+use twitch_chat_tracker::channel::third_party_emote_list_storage::EmoteListStorage;
 use twitch_chat_tracker::errors::AppError;
+use twitch_chat_tracker::irc_chat::message_parser;
+use twitch_chat_tracker::irc_chat::message_parser::MessageParser;
 
 mod past_user_names;
-
-const LOGIN_NAME_TAG: &str = "login";
+mod username;
 
 impl SpanixScrubberConfig {
   pub async fn scrape_spanix_messages(self) -> ! {
@@ -25,6 +30,12 @@ impl SpanixScrubberConfig {
 
     let users = self.retrieve_unscrubbed_users().await.unwrap();
     let total_users = users.len();
+    let third_party_emote_list = EmoteListStorage::new(
+      std::slice::from_ref(&self.channel.login_name),
+      self.database_connection,
+    )
+    .await
+    .unwrap();
 
     for (iteration, user) in users.into_iter().enumerate() {
       if shutdown_signal.was_requested() {
@@ -42,12 +53,13 @@ impl SpanixScrubberConfig {
       );
 
       let scrubbed_user_messages =
-        match mark_user_as_scrubbed(&user, &self.channel, self.database_connection).await {
+        match mark_user_as_began_scrubbing(&user, &self.channel, self.database_connection).await {
           Ok(scrubbed_user) => scrubbed_user,
           Err(error) => {
             tracing::error!(
               "Failed to create a scrubbed_user_messages for {user:?}. Reason: `{error}`"
             );
+
             continue;
           }
         };
@@ -72,11 +84,16 @@ impl SpanixScrubberConfig {
         }
       };
 
-      if let Err(error) = self.process_user_messages(&user, user_messages).await {
+      let process_user_messages_result = self
+        .process_user_messages(&user, user_messages, &third_party_emote_list)
+        .await;
+      if let Err(error) = process_user_messages_result {
         tracing::error!("Failed to process messages for user {user:?}. Reason: `{error}`");
       }
 
-      scrubbed_user_messages.update_completed_status(self.database_connection).await;
+      scrubbed_user_messages
+        .update_completed_status(self.database_connection)
+        .await;
     }
 
     std::process::exit(0);
@@ -183,14 +200,53 @@ impl SpanixScrubberConfig {
     &self,
     user: &twitch_user::Model,
     user_messages: Vec<String>,
+    third_party_emote_list: &EmoteListStorage,
   ) -> Result<(), AppError> {
-    let mut past_names: HashSet<UserName> = HashSet::new();
+    let mut past_names: PastUserNames = PastUserNames::default();
+    let message_count = user_messages.len();
+    let percentages: Vec<usize> = (1..=10)
+      .map(|divisor| (message_count as f32 * (divisor as f32 / 10.0)).ceil() as usize)
+      .collect();
 
-    todo!("Turn the messages into models and insert them all.");
+    tracing::info!("Processing messages for user `{user:?}`");
+
+    for (iteration, message) in user_messages.into_iter().enumerate() {
+      if percentages.contains(&iteration) {
+        tracing::info!(
+          "{}% ({iteration} | {message_count}) finished processing {user:?}'s messages",
+          iteration * 100 / message_count,
+        );
+      }
+      let mut irc_message = IrcMessage::from(message.as_str());
+
+      past_names.check_for_user_name_changes(&mut irc_message, user);
+
+      let message_parser = match MessageParser::new(&irc_message, third_party_emote_list) {
+        Ok(message_parser) => message_parser,
+        Err(error) => {
+          tracing::error!(
+            "Failed to create message parser for message. Message: {message:?}. Reason: {error}"
+          );
+
+          continue;
+        }
+      };
+
+      if let Some(message_parser) = message_parser
+        && let Err(error) = message_parser.parse(self.database_connection).await
+      {
+        tracing::error!("Failed to parse a message for user `{user:?}`. Reason: {error}");
+      }
+    }
+
+    // Get them all, sort them by timestamp, and build up through time to determine
+    // at a given time what the *previous* name was and what the new one *is*
+    todo!("go through past_names and insert the discovered past names.");
   }
 }
 
-async fn mark_user_as_scrubbed(
+/// Create a new `scrubbed_user_messages` with the `completed` field set to false.
+async fn mark_user_as_began_scrubbing(
   user: &twitch_user::Model,
   channel: &twitch_user::Model,
   database_connection: &DatabaseConnection,
@@ -203,39 +259,4 @@ async fn mark_user_as_scrubbed(
   .insert(database_connection)
   .await
   .map_err(Into::into)
-}
-
-async fn check_for_name_changes(
-  user: &twitch_user::Model,
-  past_names: PastNames,
-  check_new_name: UserName
-) -> Result<(), AppError> {
-  todo!("Check if the new name doesn't match any known variations.");
-}
-
-/// Replaces the login tag value of the login name of the IRC message differs from the one given.
-/// This is for when someone changed their username at any point.
-///
-/// If the names differ, attempts to create a twitch_user_name_change if it didn't already exist.
-async fn set_irc_login_tag_if_names_differ(
-  irc_message: &mut IrcMessage,
-  user_login: &str,
-) -> Result<(), AppError> {
-  let Some(tags) = &mut irc_message.tags else {
-    return Ok(());
-  };
-
-  for IrcTag(tag_name, tag_value) in tags {
-    if tag_name != LOGIN_NAME_TAG {
-      continue;
-    }
-
-    if let Some(login) = tag_value
-      && login != user_login
-    {
-      *login = user_login.to_string();
-    }
-  }
-
-  Ok(())
 }

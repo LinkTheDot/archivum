@@ -17,8 +17,8 @@ pub struct SevenTvUserResponse {
 }
 
 impl From<SevenTvUserResponse> for EmoteResponseList {
-  fn from(global_response: SevenTvUserResponse) -> Self {
-    let emotes: Vec<EmoteResponse> = global_response
+  fn from(user_response: SevenTvUserResponse) -> Self {
+    let emotes: Vec<EmoteResponse> = user_response
       .emote_set
       .emotes
       .into_iter()

@@ -204,6 +204,8 @@ impl EmoteList {
       if status == StatusCode::NOT_FOUND {
         return Ok(EmoteResponseList::default());
       } else {
+        tracing::error!("Failed emote response: {response:?}");
+
         return Err(AppError::FailedResponse {
           location: "get_third_party_emote_response",
           code: status.as_u16(),

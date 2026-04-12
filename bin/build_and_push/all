@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+
+docker build --progress=plain -t $HOMELAB_ADDRESS:30005/archivum-twitch-tracker:latest -f twitch_chat_tracker/Dockerfile . &&
+docker push $HOMELAB_ADDRESS:30005/archivum-twitch-tracker:latest &&
+
+docker build --progress=plain -t $HOMELAB_ADDRESS:30005/archivum-backend:latest -f backend/Dockerfile . &&
+docker push $HOMELAB_ADDRESS:30005/archivum-backend:latest &&
+
+docker build --progress=plain -t $HOMELAB_ADDRESS:30005/archivum-frontend:latest -f frontend/Dockerfile frontend &&
+docker push $HOMELAB_ADDRESS:30005/archivum-frontend:latest &&
+
+docker build --progress=plain -t $HOMELAB_ADDRESS:30005/archivum-nightly-checks:latest -f nightly_checks/Dockerfile . &&
+docker push $HOMELAB_ADDRESS:30005/archivum-nightly-checks:latest

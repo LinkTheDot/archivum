@@ -34,6 +34,10 @@ impl<'a> MessageParser<'a> {
     }))
   }
 
+  pub fn get_message(&self) -> &TwitchIrcMessage {
+    &self.message
+  }
+
   pub async fn parse(self, database_connection: &DatabaseConnection) -> Result<(), AppError> {
     if self.message.message_type_has_user_message_attached() {
       self.parse_user_message(database_connection).await?;
