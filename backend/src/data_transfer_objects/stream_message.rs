@@ -25,10 +25,15 @@ impl StreamMessageDto {
   pub async fn convert_messages(
     user_messages: Vec<stream_message::Model>,
     database_connection: &DatabaseConnection,
+    skip_emotes: bool,
   ) -> Result<Vec<Self>, AppError> {
-    let emotes_used: Vec<Vec<emote::Model>> = user_messages
-      .load_many_to_many(emote::Entity, emote_usage::Entity, database_connection)
-      .await?;
+    let emotes_used: Vec<Vec<emote::Model>> = if skip_emotes {
+      vec![vec![]; user_messages.len()]
+    } else {
+      user_messages
+        .load_many_to_many(emote::Entity, emote_usage::Entity, database_connection)
+        .await?
+    };
 
     Ok(
       user_messages

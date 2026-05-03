@@ -2,7 +2,8 @@ use crate::app::InterfaceConfig;
 use crate::data_transfer_objects::chat_surge::ChatSurgeDto;
 use crate::error::AppError;
 use crate::response_models::{paginated_parameters::*, paginatied_response::*};
-use crate::routes::helpers::serde::*;
+use crate::routes::helpers::get_stream::{get_stream, GetStream};
+use crate::routes::helpers::serde::deserialize_from_string;
 use axum::extract::{Query, State};
 use entities::*;
 use sea_orm::*;
@@ -55,6 +56,20 @@ fn default_surge_threshold() -> f64 {
 
 fn default_baseline_window_count() -> usize {
   DEFAULT_BASELINE_WINDOW_COUNT
+}
+
+impl GetStream for ChatSurgesQuery {
+  fn get_stream_id(&self) -> Option<&str> {
+    self.stream_id.as_deref()
+  }
+
+  fn get_twitch_stream_id(&self) -> Option<&str> {
+    self.twitch_stream_id.as_deref()
+  }
+
+  fn get_twitch_vod_id(&self) -> Option<&str> {
+    self.twitch_vod_id.as_deref()
+  }
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -127,44 +142,10 @@ pub async fn get_chat_surges(
   }))
 }
 
-async fn get_stream(
-  query: &ChatSurgesQuery,
-  database_connection: &DatabaseConnection,
-) -> Result<stream::Model, AppError> {
-  if let Some(id_str) = &query.stream_id {
-    let id: i32 = id_str
-      .parse()
-      .map_err(|_| AppError::InvalidStreamIdentifier {
-        value: id_str.clone(),
-      })?;
-    stream::Entity::find_by_id(id)
-      .one(database_connection)
-      .await?
-      .ok_or(AppError::FailedToFindStreamByID { stream_id: id })
-  } else if let Some(twitch_id_str) = &query.twitch_stream_id {
-    let twitch_id: u64 = twitch_id_str
-      .parse()
-      .map_err(|_| AppError::InvalidStreamIdentifier {
-        value: twitch_id_str.clone(),
-      })?;
-    stream::Entity::find()
-      .filter(stream::Column::TwitchStreamId.eq(twitch_id))
-      .one(database_connection)
-      .await?
-      .ok_or(AppError::FailedToFindStreamByTwitchStreamId {
-        twitch_stream_id: twitch_id,
-      })
-  } else if let Some(vod_id) = &query.twitch_vod_id {
-    stream::Entity::find()
-      .filter(stream::Column::TwitchVodId.eq(vod_id.as_str()))
-      .one(database_connection)
-      .await?
-      .ok_or(AppError::FailedToFindStreamByVodId {
-        vod_id: vod_id.clone(),
-      })
-  } else {
-    Err(AppError::NoStreamIdentifierProvided)
-  }
+struct SurgeBucket {
+  bucket: u64,
+  count: u64,
+  baseline: f64,
 }
 
 fn compute_surges(
@@ -188,7 +169,7 @@ fn compute_surges(
   // BTreeMap iteration is sorted by key, so this preserves chronological order.
   let bucket_list: Vec<(u64, u64)> = buckets.into_iter().collect();
 
-  let mut surges = Vec::new();
+  let mut surge_buckets: Vec<SurgeBucket> = Vec::new();
 
   for (i, &(bucket, count)) in bucket_list.iter().enumerate() {
     // Need at least one preceding window to establish a local baseline.
@@ -198,21 +179,43 @@ fn compute_surges(
 
     let lookback_start = i.saturating_sub(baseline_window_count);
     let preceding = &bucket_list[lookback_start..i];
-
-    let baseline = preceding.iter().map(|(_, c)| *c as f64).sum::<f64>() / preceding.len() as f64;
+    let baseline =
+      preceding.iter().map(|(_, c)| *c as f64).sum::<f64>() / preceding.len() as f64;
 
     if count as f64 >= baseline * surge_threshold {
-      let window_start_seconds = (bucket * window_size_seconds) as i64;
-      let window_end_seconds = window_start_seconds + window_size_seconds as i64;
-
-      surges.push(ChatSurgeDto {
-        window_start_seconds,
-        window_end_seconds,
-        message_count: count,
-        baseline_message_count: baseline,
-        surge_factor: count as f64 / baseline,
-      });
+      surge_buckets.push(SurgeBucket { bucket, count, baseline });
     }
+  }
+
+  // Merge consecutive surge buckets into a single surge entry.
+  let mut surges: Vec<ChatSurgeDto> = Vec::new();
+  let mut iter = surge_buckets.into_iter().peekable();
+
+  while let Some(first) = iter.next() {
+    let start_bucket = first.bucket;
+    let mut last_bucket = first.bucket;
+    let mut total_count = first.count;
+    let mut baseline_sum = first.baseline;
+    let mut merged_windows = 1u64;
+
+    while iter.peek().is_some_and(|next| next.bucket == last_bucket + 1) {
+      let next = iter.next().unwrap();
+      last_bucket = next.bucket;
+      total_count += next.count;
+      baseline_sum += next.baseline;
+      merged_windows += 1;
+    }
+
+    let avg_baseline = baseline_sum / merged_windows as f64;
+    let avg_messages_per_window = total_count as f64 / merged_windows as f64;
+
+    surges.push(ChatSurgeDto {
+      window_start_seconds: (start_bucket * window_size_seconds) as i64,
+      window_end_seconds: (last_bucket * window_size_seconds + window_size_seconds) as i64,
+      message_count: total_count,
+      baseline_message_count: avg_baseline,
+      surge_factor: avg_messages_per_window / avg_baseline,
+    });
   }
 
   surges

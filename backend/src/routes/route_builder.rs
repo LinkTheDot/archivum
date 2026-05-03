@@ -63,9 +63,8 @@ impl RouteBuilder for axum::Router<InterfaceConfig> {
   }
 
   fn apply_stream_routes(self) -> Self {
-    self.route(
-      "/surges",
-      get(crate::routes::streams::chat_surges::get_chat_surges),
-    )
+    self
+      .route("/surges", get(crate::routes::streams::chat_surges::get_chat_surges))
+      .route("/streams/messages", get(crate::routes::streams::messages::get_stream_messages))
   }
 }

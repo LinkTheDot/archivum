@@ -59,7 +59,7 @@ pub async fn get_messages(
   let user_messages = paginated_user_messages.fetch_page(pagination.page).await?;
 
   let user_messages_dtos =
-    StreamMessageDto::convert_messages(user_messages, database_connection).await?;
+    StreamMessageDto::convert_messages(user_messages, database_connection, false).await?;
 
   let ItemsAndPagesNumber {
     number_of_items,
