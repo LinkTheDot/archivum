@@ -59,7 +59,10 @@ impl MessageParser<'_> {
     {
       Ok(donator) => Some(donator),
       Err(error) => {
-        tracing::error!("Failed to get donator from a streamlabs donation. Reason: {:?}. Attempting guess based on known users.", error);
+        tracing::error!(
+          "Failed to get donator from a streamlabs donation. Reason: {:?}. Attempting guess based on known users.",
+          error
+        );
 
         twitch_user::Model::guess_name(parsed_donation_contents.donator_name, database_connection)
           .await?

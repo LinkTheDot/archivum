@@ -94,7 +94,10 @@ impl ParsedStreamMessage<'_, Model> {
     third_party_emote_list_storage: &EmoteListStorage,
   ) -> Vec<emote_usage::ActiveModel> {
     let StoredMessageModel::Model(stream_message) = &self.stream_message_model else {
-      tracing::error!("Unreachable broken state has been reached when parsing a stream message. Message dump: {:#?}", self);
+      tracing::error!(
+        "Unreachable broken state has been reached when parsing a stream message. Message dump: {:#?}",
+        self
+      );
 
       return vec![];
     };
@@ -131,7 +134,10 @@ impl ParsedStreamMessage<'_, Model> {
     database_connection: &DatabaseConnection,
   ) -> Result<Vec<emote_usage::ActiveModel>, AppError> {
     let StoredMessageModel::Model(stream_message) = &self.stream_message_model else {
-      tracing::error!("Unreachable broken state has been reached when parsing a stream message. Message dump: {:#?}", self);
+      tracing::error!(
+        "Unreachable broken state has been reached when parsing a stream message. Message dump: {:#?}",
+        self
+      );
 
       return Ok(vec![]);
     };

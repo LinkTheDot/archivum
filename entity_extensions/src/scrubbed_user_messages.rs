@@ -16,7 +16,7 @@ impl ScrubbedUserMessagesExtensions for scrubbed_user_messages::Model {
     database_connection: &DatabaseConnection,
   ) -> Result<(), EntityExtensionError> {
     let mut active_model = self.into_active_model();
-    active_model.completed_successfully = Set(Some(true as i8));
+    active_model.completed_successfully = Set(true as i8);
 
     active_model.update(database_connection).await?;
 

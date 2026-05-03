@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod channel_emote_cache;
 pub mod donation_event;
 pub mod emote;
 pub mod emote_usage;

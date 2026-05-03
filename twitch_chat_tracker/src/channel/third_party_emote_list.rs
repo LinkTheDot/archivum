@@ -61,6 +61,18 @@ impl EmoteList {
     }
   }
 
+  pub fn from_list(channel_name: String, emote_list: Vec<emote::Model>) -> Self {
+    let emote_list: HashMap<String, emote::Model> = emote_list
+      .into_iter()
+      .map(|emote| (emote.name.clone(), emote))
+      .collect();
+
+    Self {
+      channel_name,
+      emote_list,
+    }
+  }
+
   pub async fn get_list(
     channel: &twitch_user::Model,
     database_connection: &DatabaseConnection,
@@ -114,13 +126,10 @@ impl EmoteList {
   }
 
   /// Returns the `emote_name | Emote` for the channel from 7tv, bttv, and frankerfacez.
-  #[allow(unused)]
   async fn get_full_emote_list(
     channel: &twitch_user::Model,
     database_connection: &DatabaseConnection,
   ) -> Result<HashMap<String, emote::Model>, AppError> {
-    let channel_twitch_id = channel.twitch_id.to_string();
-
     let mut emotes = EmoteResponseList::default();
 
     tracing::info!("Fetching 7TV emotes for `{}`", channel.login_name);

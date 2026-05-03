@@ -4,20 +4,24 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "twitch_user_name_change")]
+#[sea_orm(table_name = "channel_emote_cache")]
 pub struct Model {
-  #[sea_orm(primary_key)]
-  pub id: i32,
+  #[sea_orm(primary_key, auto_increment = false)]
   pub twitch_user_id: i32,
-  pub previous_login_name: Option<String>,
-  pub previous_display_name: Option<String>,
-  pub new_login_name: Option<String>,
-  pub new_display_name: Option<String>,
-  pub created_at: DateTimeUtc,
+  #[sea_orm(primary_key, auto_increment = false)]
+  pub emote_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+  #[sea_orm(
+    belongs_to = "super::emote::Entity",
+    from = "Column::EmoteId",
+    to = "super::emote::Column::Id",
+    on_update = "NoAction",
+    on_delete = "Cascade"
+  )]
+  Emote,
   #[sea_orm(
     belongs_to = "super::twitch_user::Entity",
     from = "Column::TwitchUserId",
@@ -26,6 +30,12 @@ pub enum Relation {
     on_delete = "Cascade"
   )]
   TwitchUser,
+}
+
+impl Related<super::emote::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Emote.def()
+  }
 }
 
 impl Related<super::twitch_user::Entity> for Entity {
