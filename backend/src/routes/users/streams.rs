@@ -35,7 +35,9 @@ pub async fn get_streams(
   let Some(user) = user_query.one(database_connection).await? else {
     return Err(query_payload.get_missing_user_error());
   };
-  let stream_query = stream::Entity::find().filter(stream::Column::TwitchUserId.eq(user.id));
+  let stream_query = stream::Entity::find()
+    .filter(stream::Column::TwitchUserId.eq(user.id))
+    .order_by_desc(stream::Column::StartTimestamp);
   let paginated_streams = stream_query.paginate(database_connection, pagination.page_size);
 
   let fetched_paginated_streams = paginated_streams.fetch_page(pagination.page).await?;

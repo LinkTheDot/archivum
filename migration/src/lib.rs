@@ -80,7 +80,7 @@ impl MigratorTrait for Migrator {
       Box::new(m20260119_032412_add_is_subscription_column_to_stream_messages::Migration),
       Box::new(m20260129_060402_scrubbed_user_messages_table::Migration),
       Box::new(m20260216_022548_add_channel_user_time_index_to_stream_message::Migration),
-      // Box::new(m20260412_202824_channel_emote_cache_table::Migration),
+      Box::new(m20260412_202824_channel_emote_cache_table::Migration),
     ]
   }
 }

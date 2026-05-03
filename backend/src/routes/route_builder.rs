@@ -5,13 +5,15 @@ pub trait RouteBuilder {
   fn apply_all_routes(self) -> Self;
   fn apply_user_routes(self) -> Self;
   fn apply_donation_routes(self) -> Self;
+  fn apply_stream_routes(self) -> Self;
 }
 
 impl RouteBuilder for axum::Router<InterfaceConfig> {
   fn apply_all_routes(self) -> Self {
-    self //
+    self
       .apply_user_routes()
       .apply_donation_routes()
+      .apply_stream_routes()
   }
 
   fn apply_user_routes(self) -> Self {
@@ -58,5 +60,12 @@ impl RouteBuilder for axum::Router<InterfaceConfig> {
     //   "/subathon",
     //   get(crate::routes::donations::subathon_data::get_subathon_data),
     // )
+  }
+
+  fn apply_stream_routes(self) -> Self {
+    self.route(
+      "/surges",
+      get(crate::routes::streams::chat_surges::get_chat_surges),
+    )
   }
 }
