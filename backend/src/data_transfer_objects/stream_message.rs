@@ -4,6 +4,13 @@ use entity_extensions::external_service::*;
 use sea_orm::{DatabaseConnection, LoaderTrait, prelude::DateTimeUtc};
 
 #[derive(Debug, serde::Serialize)]
+pub struct StreamMessageUser {
+  pub twitch_id: i32,
+  pub login_name: String,
+  pub display_name: String,
+}
+
+#[derive(Debug, serde::Serialize)]
 pub struct StreamMessageDto {
   pub id: i32,
   pub is_first_message: bool,
@@ -12,6 +19,7 @@ pub struct StreamMessageDto {
   pub is_subscriber: bool,
   /// Contents index and emote data.
   pub emote_usage: Vec<StreamMessageEmote>,
+  pub user: Option<StreamMessageUser>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -22,8 +30,44 @@ pub struct StreamMessageEmote {
 }
 
 impl StreamMessageDto {
+  pub const SKIP_EMOTES: bool = true;
+  pub const CALCULATE_EMOTES: bool = true;
+
   pub async fn convert_messages(
     user_messages: Vec<stream_message::Model>,
+    database_connection: &DatabaseConnection,
+    skip_emotes: bool,
+  ) -> Result<Vec<Self>, AppError> {
+    let no_paired_users = vec![];
+
+    Self::convert_messages_inner(
+      user_messages,
+      no_paired_users,
+      database_connection,
+      skip_emotes,
+    )
+    .await
+  }
+
+  pub async fn convert_messages_with_users(
+    message_pairs: Vec<(stream_message::Model, Option<StreamMessageUser>)>,
+    database_connection: &DatabaseConnection,
+    skip_emotes: bool,
+  ) -> Result<Vec<Self>, AppError> {
+    let (user_messages, paired_users): (Vec<_>, Vec<_>) = message_pairs.into_iter().unzip();
+
+    Self::convert_messages_inner(
+      user_messages,
+      paired_users,
+      database_connection,
+      skip_emotes,
+    )
+    .await
+  }
+
+  async fn convert_messages_inner(
+    user_messages: Vec<stream_message::Model>,
+    paired_users: Vec<Option<StreamMessageUser>>,
     database_connection: &DatabaseConnection,
     skip_emotes: bool,
   ) -> Result<Vec<Self>, AppError> {
@@ -39,9 +83,10 @@ impl StreamMessageDto {
       user_messages
         .into_iter()
         .zip(emotes_used)
-        .map(|(message, emotes)| {
+        .zip(paired_users)
+        .map(|((message, emotes), user)| {
           let message_contents = message.contents.unwrap_or_default();
-          let mut emote_usage: Vec<StreamMessageEmote> = get_emote_usage(&message_contents, emotes);
+          let mut emote_usage = get_emote_usage(&message_contents, emotes);
           emote_usage.sort_by(|lhs, rhs| lhs.contents_indices.cmp(&rhs.contents_indices));
 
           StreamMessageDto {
@@ -51,6 +96,7 @@ impl StreamMessageDto {
             contents: message_contents,
             is_subscriber: message.is_subscriber != 0,
             emote_usage,
+            user,
           }
         })
         .collect(),
