@@ -1,3 +1,4 @@
+pub mod chat_surge;
 pub mod donation_event;
 pub mod follow;
 pub mod gift_sub_recipient;

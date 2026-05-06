@@ -1,4 +1,5 @@
 pub mod active_streams;
+pub mod cached_emotes;
 pub mod response_objects;
 pub mod third_party_emote_list;
 pub mod third_party_emote_list_storage;

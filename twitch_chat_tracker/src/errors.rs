@@ -160,7 +160,10 @@ pub enum AppError {
   #[error("The websocket connection has timedout.")]
   WebsocketTimeout,
 
-  #[error("Received an unknown value when parsing the event type for a websocket stream update message. Got: {:?}", value)]
+  #[error(
+    "Received an unknown value when parsing the event type for a websocket stream update message. Got: {:?}",
+    value
+  )]
   UnknownEventTypeValueInStreamUpdateMessage { value: String },
 
   #[error(

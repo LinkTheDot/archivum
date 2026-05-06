@@ -1,4 +1,5 @@
-use crate::channel::third_party_emote_list::EmoteList;
+use crate::channel::cached_emotes::CacheNameIdentifier;
+use crate::channel::{cached_emotes::EmoteCache, third_party_emote_list::EmoteList};
 use crate::errors::AppError;
 use entities::{emote, twitch_user};
 use entity_extensions::{prelude::*, twitch_user::ChannelIdentifier};
@@ -24,7 +25,9 @@ impl EmoteListStorage {
     database_connection: &DatabaseConnection,
   ) -> Result<Self, AppError> {
     if cfg!(test) {
-      panic!("Called new on EmoteListStorage in a test environment. Use EmoteListStorage::test_list instead.");
+      panic!(
+        "Called new on EmoteListStorage in a test environment. Use EmoteListStorage::test_list instead."
+      );
     }
 
     let channel_names: Vec<&str> = channel_names.iter().map(String::as_str).collect();
@@ -37,7 +40,22 @@ impl EmoteListStorage {
       stream::iter(channels)
         .map(|channel| async move {
           let channel_login = channel.login_name.clone();
-          let emote_list = EmoteList::get_list(&channel, database_connection).await?;
+          let cache_channel_identifier = CacheNameIdentifier::TwitchUser(&channel);
+          let emote_list_result = EmoteList::get_list(&channel, database_connection).await;
+          let emote_list = match emote_list_result {
+            Ok(emote_list) => {
+              EmoteCache::update_cache(cache_channel_identifier, &emote_list, database_connection)
+                .await?;
+
+              emote_list
+            }
+            Err(error) => {
+              tracing::error!(
+                "Failed to retrieve emote list for channel {channel:?}, falling back to cached emotes. Error: {error}"
+              );
+              EmoteCache::retrieve_from_cache(cache_channel_identifier, database_connection).await?
+            }
+          };
 
           Ok::<_, AppError>((channel_login, emote_list))
         })
@@ -65,10 +83,24 @@ impl EmoteListStorage {
   async fn get_global_emote_list(
     database_connection: &DatabaseConnection,
   ) -> Result<(String, EmoteList), AppError> {
-    Ok((
-      EmoteList::GLOBAL_NAME.to_string(),
-      EmoteList::get_global_list(database_connection).await?,
-    ))
+    let cache_identifier = CacheNameIdentifier::Global;
+    let global_emote_list_result = EmoteList::get_global_list(database_connection).await;
+
+    let global_emote_list = match global_emote_list_result {
+      Ok(global_emote_list) => {
+        EmoteCache::update_cache(cache_identifier, &global_emote_list, database_connection).await?;
+
+        global_emote_list
+      }
+      Err(error) => {
+        tracing::error!(
+          "Failed to retrieve global emote list, falling back to cache. Error: {error}"
+        );
+        EmoteCache::retrieve_from_cache(cache_identifier, database_connection).await?
+      }
+    };
+
+    Ok((EmoteList::GLOBAL_NAME.to_string(), global_emote_list))
   }
 
   /// Returns the list of emotes stored defined by EmoteList::TEST_EMOTES for every channel under AppConfig::TEST_CHANNELS and EmoteList::GLOBAL_NAME.

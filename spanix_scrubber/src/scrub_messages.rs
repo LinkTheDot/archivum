@@ -1,6 +1,7 @@
 use crate::config::SpanixScrubberConfig;
-use crate::response_models::avaiable_logs::{AvailableLogs, LogEntry};
-use crate::response_models::user_messages::UserMessages;
+// use crate::response_models::avaiable_logs::AvailableLogs;
+// use crate::response_models::avaiable_logs::{AvailableLogs, LogEntry};
+// use crate::response_models::user_messages::UserMessages;
 use entities::twitch_user;
 use futures::future::join_all;
 use sea_orm::*;
@@ -28,13 +29,13 @@ impl SpanixScrubberConfig {
         login_name,
         twitch_id,
         ..
-      } = user;
+      } = &user;
 
       tracing::info!("Processing messages for user {login_name} | {iteration}/{total_user_count}");
 
       let user_file_path = PathBuf::from(format!("{}/{twitch_id}", Self::DATA_OUTPUT_DIRECTORY));
 
-      if Self::user_file_is_completed(&user_file_path, &login_name).await {
+      if Self::user_file_is_completed(&user_file_path, login_name).await {
         tracing::warn!("Skipping messages for user `{login_name}`. File already exists.");
 
         continue;
@@ -42,12 +43,12 @@ impl SpanixScrubberConfig {
 
       let runtime = Instant::now();
 
-      let Some(available_message_logs) = self.get_user_logs(&login_name).await else {
+      let Some(available_message_logs) = self.get_available_logs(&user).await else {
         continue;
       };
 
       let user_messages_result = self
-        .get_available_entries(&login_name, available_message_logs)
+        .get_available_entries(&user, available_message_logs)
         .await;
       let user_messages = match user_messages_result {
         Ok(user_messages) => user_messages,
@@ -58,7 +59,7 @@ impl SpanixScrubberConfig {
       };
 
       let future = tokio::spawn(async move {
-        Self::write_all_messages_to_user_file(login_name, twitch_id, user_messages).await
+        Self::write_all_messages_to_user_file(&user.login_name, user.twitch_id, user_messages).await
       });
 
       message_processing_futures.push(future);
@@ -115,65 +116,65 @@ impl SpanixScrubberConfig {
     false
   }
 
-  /// Retrieves the available message logs for a user.
-  ///
-  /// None is returned if the list could not be retrieved or there were no logs.
-  async fn get_user_logs(&self, login_name: &str) -> Option<AvailableLogs> {
-    let available_message_logs_result =
-      AvailableLogs::get_available_logs_for_user(login_name, &self.channel_login).await;
-    let mut available_message_logs = match available_message_logs_result {
-      Ok(Some(available_logs)) => available_logs,
-      Ok(None) => {
-        tracing::warn!("No available logs found for `{login_name}`.");
+  // /// Retrieves the available message logs for a user.
+  // ///
+  // /// None is returned if the list could not be retrieved or there were no logs.
+  // async fn get_user_logs(&self, login_name: &str) -> Option<AvailableLogs> {
+  //   let available_message_logs_result =
+  //     AvailableLogs::get_available_logs_for_user(login_name, &self.channel_login).await;
+  //   let mut available_message_logs = match available_message_logs_result {
+  //     Ok(Some(available_logs)) => available_logs,
+  //     Ok(None) => {
+  //       tracing::warn!("No available logs found for `{login_name}`.");
+  //
+  //       return None;
+  //     }
+  //     Err(error) => {
+  //       tracing::error!(
+  //         "Failed to get available message logs for user {login_name}. Reason: {error}"
+  //       );
+  //
+  //       return None;
+  //     }
+  //   };
+  //
+  //   available_message_logs.remove_after_date(Self::REMOVE_AFTER_YEAR, Self::REMOVE_AFTER_MONTH);
+  //
+  //   if available_message_logs.logs.is_empty() {
+  //     tracing::warn!("No available logs found for `{login_name}`.");
+  //
+  //     return None;
+  //   }
+  //
+  //   Some(available_message_logs)
+  // }
 
-        return None;
-      }
-      Err(error) => {
-        tracing::error!(
-          "Failed to get available message logs for user {login_name}. Reason: {error}"
-        );
-
-        return None;
-      }
-    };
-
-    available_message_logs.remove_after_date(Self::REMOVE_AFTER_YEAR, Self::REMOVE_AFTER_MONTH);
-
-    if available_message_logs.logs.is_empty() {
-      tracing::warn!("No available logs found for `{login_name}`.");
-
-      return None;
-    }
-
-    Some(available_message_logs)
-  }
-
-  async fn get_available_entries(
-    &self,
-    login_name: &str,
-    available_log_entries: AvailableLogs,
-  ) -> Result<Vec<String>, AppError> {
-    let mut all_user_messages = vec![];
-
-    for LogEntry { year, month } in &available_log_entries.logs {
-      tracing::info!("Getting messages on {year}-{month} for {login_name}");
-      let raw_messages =
-        UserMessages::get_messages(&self.channel_login, login_name, year, month).await?;
-      let raw_messages: Vec<String> = raw_messages
-        .messages
-        .into_iter()
-        .map(|user_message| user_message.raw)
-        .collect();
-
-      all_user_messages.extend(raw_messages);
-    }
-
-    Ok(all_user_messages)
-  }
+  // async fn get_available_entries(
+  //   &self,
+  //   login_name: &str,
+  //   available_log_entries: AvailableLogs,
+  // ) -> Result<Vec<String>, AppError> {
+  //   let mut all_user_messages = vec![];
+  //
+  //   for LogEntry { year, month } in &available_log_entries.logs {
+  //     tracing::info!("Getting messages on {year}-{month} for {login_name}");
+  //     let raw_messages =
+  //       UserMessages::get_messages(&self.channel_login, login_name, year, month).await?;
+  //     let raw_messages: Vec<String> = raw_messages
+  //       .messages
+  //       .into_iter()
+  //       .map(|user_message| user_message.raw)
+  //       .collect();
+  //
+  //     all_user_messages.extend(raw_messages);
+  //   }
+  //
+  //   Ok(all_user_messages)
+  // }
 
   /// Takes the list of raw IRC messages for a user and writes them to a file.
   async fn write_all_messages_to_user_file(
-    user_login: String,
+    user_login: &str,
     user_twitch_id: i32,
     messages: Vec<String>,
   ) {

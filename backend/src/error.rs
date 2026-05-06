@@ -35,8 +35,23 @@ pub enum AppError {
     identifier: ChannelIdentifier<String>,
   },
 
+  #[error("No stream identifier was provided. Supply one of: stream_id, twitch_stream_id, twitch_vod_id.")]
+  NoStreamIdentifierProvided,
+
+  #[error("Invalid stream identifier: {}", value)]
+  InvalidStreamIdentifier { value: String },
+
   #[error("Failed to find a stream with the ID {}", stream_id)]
   FailedToFindStreamByID { stream_id: i32 },
+
+  #[error("Failed to find a stream with the Twitch stream ID {}", twitch_stream_id)]
+  FailedToFindStreamByTwitchStreamId { twitch_stream_id: u64 },
+
+  #[error("Failed to find a stream with the VOD ID {}", vod_id)]
+  FailedToFindStreamByVodId { vod_id: String },
+
+  #[error("Stream {} has no start timestamp", stream_id)]
+  StreamHasNoStartTimestamp { stream_id: i32 },
 
   #[error("Failed to find a donation event with the ID {}", donation_event_id)]
   FailedToFindDonationEventByID { donation_event_id: i32 },
@@ -68,7 +83,12 @@ impl From<AppError> for StatusCode {
       AppError::CouldNotFindUserByLoginName { .. } => StatusCode::NOT_FOUND,
       AppError::CouldNotFindUserByInternalID { .. } => StatusCode::NOT_FOUND,
       AppError::CouldNotFindUserByIdentifier { .. } => StatusCode::NOT_FOUND,
+      AppError::NoStreamIdentifierProvided => StatusCode::BAD_REQUEST,
+      AppError::InvalidStreamIdentifier { .. } => StatusCode::BAD_REQUEST,
       AppError::FailedToFindStreamByID { .. } => StatusCode::NOT_FOUND,
+      AppError::FailedToFindStreamByTwitchStreamId { .. } => StatusCode::NOT_FOUND,
+      AppError::FailedToFindStreamByVodId { .. } => StatusCode::NOT_FOUND,
+      AppError::StreamHasNoStartTimestamp { .. } => StatusCode::UNPROCESSABLE_ENTITY,
       AppError::FailedToFindDonationEventByID { .. } => StatusCode::NOT_FOUND,
       AppError::FailedToParseResponse { .. } => StatusCode::INTERNAL_SERVER_ERROR,
 

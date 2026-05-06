@@ -11,7 +11,7 @@ pub struct AvailableLogs {
   pub logs: Vec<LogEntry>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
 pub struct LogEntry {
   pub year: String,
   pub month: String,

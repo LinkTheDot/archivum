@@ -34,7 +34,10 @@ pub async fn run_main_process(
       }
 
       Err(AppError::MpscConnectionClosed { error }) => {
-        tracing::error!("Failed to send message processing handle to the message processor: {}. Exiting the program.", error);
+        tracing::error!(
+          "Failed to send message processing handle to the message processor: {}. Exiting the program.",
+          error
+        );
 
         std::process::exit(1);
       }

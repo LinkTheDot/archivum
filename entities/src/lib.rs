@@ -2,12 +2,14 @@
 
 pub mod prelude;
 
+pub mod channel_emote_cache;
 pub mod donation_event;
 pub mod emote;
 pub mod emote_usage;
 pub mod gift_sub_recipient;
 pub mod muted_vod_segment;
 pub mod raid;
+pub mod scrubbed_user_messages;
 pub mod sea_orm_active_enums;
 pub mod stream;
 pub mod stream_message;
