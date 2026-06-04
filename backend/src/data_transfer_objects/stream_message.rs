@@ -3,7 +3,7 @@ use entities::*;
 use entity_extensions::external_service::*;
 use sea_orm::{DatabaseConnection, LoaderTrait, prelude::DateTimeUtc};
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct StreamMessageUser {
   pub twitch_id: i32,
   pub login_name: String,
@@ -38,7 +38,7 @@ impl StreamMessageDto {
     database_connection: &DatabaseConnection,
     skip_emotes: bool,
   ) -> Result<Vec<Self>, AppError> {
-    let no_paired_users = vec![];
+    let no_paired_users = vec![None; user_messages.len()];
 
     Self::convert_messages_inner(
       user_messages,
