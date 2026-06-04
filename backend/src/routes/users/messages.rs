@@ -58,8 +58,13 @@ pub async fn get_messages(
     user_messages_query.paginate(database_connection, pagination.page_size);
   let user_messages = paginated_user_messages.fetch_page(pagination.page).await?;
 
+  let user_message_count = user_messages.len();
   let user_messages_dtos =
     StreamMessageDto::convert_messages(user_messages, database_connection, false).await?;
+
+  if user_message_count != user_messages_dtos.len() {
+    tracing::warn!("Mismatch in user message count after DTO conversion.");
+  }
 
   let ItemsAndPagesNumber {
     number_of_items,
