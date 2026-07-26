@@ -1,5 +1,7 @@
 use app_config::AppConfig;
 
+use crate::manual_migrations::donation_charts;
+
 // Glorp ass: https://discord.com/channels/938867634328469596/938876493503819807/1333993607647985806
 // Other Glorp ass: https://cdn.discordapp.com/emojis/1333507652591947847.webp?size=44&animated=true
 // Glorp pirate: https://cdn.discordapp.com/emojis/1335429586594562058.webp?size=44
