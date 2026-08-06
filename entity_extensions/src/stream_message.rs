@@ -8,6 +8,13 @@ pub trait StreamMessageExtensions {
     emote_usage_active_models: Vec<emote_usage::ActiveModel>,
     database_connection: &DatabaseConnection,
   ) -> Result<(), EntityExtensionError>;
+
+  async fn chunked_related_emotes(
+    messages: &Vec<Self>,
+    database_connection: &DatabaseConnection,
+  ) -> Result<Vec<Vec<emote::Model>>, EntityExtensionError>
+  where
+    Self: Sized;
 }
 
 impl StreamMessageExtensions for stream_message::Model {
@@ -31,5 +38,25 @@ impl StreamMessageExtensions for stream_message::Model {
       .await?;
 
     Ok(())
+  }
+
+  async fn chunked_related_emotes(
+    messages: &Vec<Self>,
+    database_connection: &DatabaseConnection,
+  ) -> Result<Vec<Vec<emote::Model>>, EntityExtensionError>
+  where
+    Self: Sized,
+  {
+    let mut final_joined_emote_list: Vec<Vec<emote::Model>> = vec![];
+
+    for messages_chunk in messages.chunks(u16::MAX as usize) {
+      let mut many_emotes: Vec<Vec<emote::Model>> = messages_chunk
+        .load_many_to_many(emote::Entity, emote_usage::Entity, database_connection)
+        .await?;
+
+      final_joined_emote_list.append(&mut many_emotes);
+    }
+
+    Ok(final_joined_emote_list)
   }
 }

@@ -71,7 +71,9 @@ impl SubscriptionEventDto {
       .one(database_connection)
       .await?
     else {
-      return Err(AppError::FailedToFindStreamByID { stream_id });
+      return Err(AppError::FailedToFindStreamByID {
+        stream_id: stream_id as i64,
+      });
     };
 
     StreamDto::from_stream(stream, database_connection)

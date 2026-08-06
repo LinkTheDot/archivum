@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use entities::*;
-use entity_extensions::external_service::*;
-use sea_orm::{DatabaseConnection, LoaderTrait, prelude::DateTimeUtc};
+use entity_extensions::{external_service::*, stream_message::*};
+use sea_orm::{DatabaseConnection, prelude::DateTimeUtc};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct StreamMessageUser {
@@ -71,13 +71,15 @@ impl StreamMessageDto {
     database_connection: &DatabaseConnection,
     skip_emotes: bool,
   ) -> Result<Vec<Self>, AppError> {
+    tracing::info!("Loading many to many");
     let emotes_used: Vec<Vec<emote::Model>> = if skip_emotes {
       vec![vec![]; user_messages.len()]
     } else {
-      user_messages
-        .load_many_to_many(emote::Entity, emote_usage::Entity, database_connection)
-        .await?
+      stream_message::Model::chunked_related_emotes(&user_messages, database_connection).await?
     };
+
+    tracing::info!("Emote usage loaded");
+    tracing::info!("Calculating emote usage pairs.");
 
     Ok(
       user_messages

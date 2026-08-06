@@ -4,7 +4,9 @@ use crate::error::*;
 use crate::response_models::{paginated_parameters::*, paginatied_response::*};
 use crate::routes::helpers::get_channel::get_channel;
 use crate::routes::helpers::get_users::GetUsers;
+use crate::routes::helpers::serde::*;
 use axum::extract::{Path, Query, State};
+use chrono::Utc;
 use entities::*;
 use sea_orm::*;
 
@@ -17,6 +19,14 @@ pub struct UserMessagesQuery {
   user_id: Option<String>,
 
   message_search: Option<String>,
+
+  #[serde(default, deserialize_with = "deserialize_from_option_string")]
+  date_start: Option<chrono::DateTime<Utc>>,
+  #[serde(default, deserialize_with = "deserialize_from_option_string")]
+  date_end: Option<chrono::DateTime<Utc>>,
+
+  #[serde(default, deserialize_with = "deserialize_from_option_string")]
+  stream_id: Option<u64>,
 
   #[serde(flatten)]
   pagination_parameters: PaginationParameters,
@@ -52,7 +62,7 @@ pub async fn get_messages(
   };
   let channel = get_channel(channel_name, database_connection).await?;
 
-  let user_messages_query = get_user_messages_query(&query_payload.message_search, &user, &channel);
+  let user_messages_query = get_user_messages_query(&query_payload, &user, &channel);
 
   let paginated_user_messages =
     user_messages_query.paginate(database_connection, pagination.page_size);
@@ -87,7 +97,7 @@ pub async fn get_messages(
 }
 
 fn get_user_messages_query(
-  message_search: &Option<String>,
+  query_payload: &UserMessagesQuery,
   user: &twitch_user::Model,
   channel: &twitch_user::Model,
 ) -> Select<stream_message::Entity> {
@@ -96,8 +106,25 @@ fn get_user_messages_query(
     .filter(stream_message::Column::ChannelId.eq(channel.id))
     .order_by(stream_message::Column::Timestamp, Order::Desc);
 
-  if let Some(message_search) = message_search {
+  if let Some(message_search) = &query_payload.message_search {
     message_query = message_query.filter(stream_message::Column::Contents.contains(message_search));
+  }
+
+  if let (Some(date_start), Some(date_end)) = (query_payload.date_start, query_payload.date_end) {
+    message_query =
+      message_query.filter(stream_message::Column::Timestamp.between(date_start, date_end));
+  } else {
+    if let Some(date_start) = query_payload.date_start {
+      message_query = message_query.filter(stream_message::Column::Timestamp.gte(date_start));
+    }
+
+    if let Some(date_end) = query_payload.date_end {
+      message_query = message_query.filter(stream_message::Column::Timestamp.lte(date_end));
+    }
+  }
+
+  if let Some(stream_id) = query_payload.stream_id {
+    message_query = message_query.filter(stream_message::Column::TwitchUserId.eq(stream_id));
   }
 
   message_query

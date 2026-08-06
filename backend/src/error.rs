@@ -35,7 +35,9 @@ pub enum AppError {
     identifier: ChannelIdentifier<String>,
   },
 
-  #[error("No stream identifier was provided. Supply one of: stream_id, twitch_stream_id, twitch_vod_id.")]
+  #[error(
+    "No stream identifier was provided. Supply one of: stream_id, twitch_stream_id, twitch_vod_id."
+  )]
   NoStreamIdentifierProvided,
 
   #[error("Invalid stream identifier: {}", value)]
@@ -44,7 +46,10 @@ pub enum AppError {
   #[error("Failed to find a stream with the ID {}", stream_id)]
   FailedToFindStreamByID { stream_id: i32 },
 
-  #[error("Failed to find a stream with the Twitch stream ID {}", twitch_stream_id)]
+  #[error(
+    "Failed to find a stream with the Twitch stream ID {}",
+    twitch_stream_id
+  )]
   FailedToFindStreamByTwitchStreamId { twitch_stream_id: u64 },
 
   #[error("Failed to find a stream with the VOD ID {}", vod_id)]
