@@ -5,6 +5,10 @@ export interface UserMessageResponse {
   channel: User;
 
   messages: UserMessage[]
+
+  // The distinct `YYYY-MM` months this user has messages for. Only populated when
+  // the request included `per_month=true`.
+  available_months: string[]
 }
 
 export interface UserMessage {

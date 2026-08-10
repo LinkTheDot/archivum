@@ -15,11 +15,12 @@ export interface StreamsResultsProps {
 }
 
 export function StreamsResults(props: StreamsResultsProps) {
-  if (!props.queryResults.userSearchQuery && !props.queryResults.channelSearchQuery) {
+  if (!props.queryResults.channelSearchQuery) {
     return;
   }
 
-  const userIdentifier = props.queryResults.userSearchQuery || props.queryResults.channelSearchQuery;
+  // Streams are looked up by channel, not a chatter's username.
+  const userIdentifier = props.queryResults.channelSearchQuery;
   const requestType = Number(userIdentifier) ? "user_id" : "maybe_login";
 
   const requestUrl = buildFetchUrl({

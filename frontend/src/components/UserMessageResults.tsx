@@ -1,10 +1,15 @@
-import { formatDate } from '../services/FormatDate';
+import { useEffect, useState } from 'react';
+import { formatDateTime } from '../services/FormatDate';
 import { buildFetchUrl } from '../services/FetchUrl';
 import { useGetData } from '../services/DataRequest';
 import { QueryFormData } from '../types/QueryFormData';
 import { Pagination } from '../types/Pagination';
 import { Emote, UserMessage, UserMessageResponse } from '../types/UserMessage';
 import { User } from '../types/users';
+import { buildAdditionalFiltersQuery, buildMonthQuery } from '../types/AdditionalFilters';
+
+// Large enough that a `per_month` request comes back with the whole month in one page.
+const PER_MONTH_PAGE_SIZE = 1_000_000;
 
 interface MessageResultsProps {
   queryResults: QueryFormData;
@@ -35,13 +40,32 @@ export function MessageResults(props: MessageResultsProps) {
 
   const userIdentifier = props.queryResults.userSearchQuery || props.queryResults.channelSearchQuery;
   const requestType = Number(userIdentifier) ? "user_id" : "maybe_login";
+  const paginateByMonth = props.queryResults.paginateByMonth;
 
-  let additionalData = "page_size=1000";
+  // The month can only be picked once we know what's available, which only comes back
+  // on a `per_month` response — so this starts empty and gets filled in below.
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+
+  let additionalData = paginateByMonth && selectedMonth
+    ? `page_size=${PER_MONTH_PAGE_SIZE}`
+    : "page_size=1000";
 
   if (props.queryResults.messageSearch) {
     additionalData += `&message_search=${props.queryResults.messageSearch}`;
   } else {
     console.log("No message search found.");
+  }
+
+  if (props.queryResults.additionalFilters.length > 0) {
+    additionalData += `&${buildAdditionalFiltersQuery(props.queryResults.additionalFilters)}`;
+  }
+
+  if (paginateByMonth) {
+    additionalData += "&per_month=true";
+
+    if (selectedMonth) {
+      additionalData += `&${buildMonthQuery(selectedMonth)}`;
+    }
   }
 
   const requestUrl = buildFetchUrl({
@@ -53,11 +77,30 @@ export function MessageResults(props: MessageResultsProps) {
     additional: additionalData,
   });
 
+  // Paginate-by-month always fetches a whole month in one uncapped page, so the
+  // regular page-number pagination never applies here — suppress it entirely rather
+  // than letting it flash on during the initial (not-yet-month-scoped) response.
+  const updatePagination = (paginationResponse: Pagination | null) => {
+    props.updatePagination(paginateByMonth ? null : paginationResponse);
+  };
+
   const { response_data, error } = useGetData<UserMessageResponse>({
     requestUrl,
-    updatePagination: props.updatePagination,
+    updatePagination,
     setIsLoading: props.setIsLoading
   });
+
+  const availableMonths = response_data?.data.available_months ?? [];
+  const availableMonthsKey = availableMonths.join(",");
+
+  // Once the months are known, default to the newest one (or fall back if the
+  // previously selected month isn't available for this user/channel anymore).
+  useEffect(() => {
+    if (paginateByMonth && availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) {
+      setSelectedMonth(availableMonths[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginateByMonth, availableMonthsKey]);
 
   if (error) {
     return (
@@ -67,29 +110,58 @@ export function MessageResults(props: MessageResultsProps) {
     );
   }
 
+  // There's a known set of months but the effect above hasn't picked one yet — the
+  // messages shown right now aren't month-scoped, so hold off rendering them.
+  const isResolvingMonth = paginateByMonth && availableMonths.length > 0 && !selectedMonth;
+
   return (
     <>
       {response_data?.data && (
         <div className="bg-gray-900/50 rounded-lg border border-gray-700">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-700">
+          <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between gap-4 flex-wrap">
             <h2 className="text-lg font-semibold text-gray-100">
               Chat Messages from `{response_data.data.user.display_name}` to `{response_data.data.channel.display_name}`
             </h2>
+
+            {paginateByMonth && availableMonths.length > 0 && selectedMonth && (
+              <label className="flex items-center gap-2 text-sm text-gray-400">
+                Month:
+                <select
+                  value={selectedMonth}
+                  onChange={(event) => setSelectedMonth(event.target.value)}
+                  className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer"
+                >
+                  {availableMonths.map((month) => (
+                    <option key={month} value={month} className="bg-gray-800">
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
 
-          {/* Messages list */}
-          <div className="divide-y divide-gray-700/50">
-            {response_data.data.messages.map((message) => (
-              <MessageRow key={message.id} message={message} user={response_data.data.user} />
-            ))}
-          </div>
-
-          {/* Empty state */}
-          {response_data.data.messages.length === 0 && (
+          {isResolvingMonth ? (
             <div className="px-4 py-8 text-center">
-              <p className="text-gray-400">No messages found</p>
+              <p className="text-gray-400">Loading available months…</p>
             </div>
+          ) : (
+            <>
+              {/* Messages list */}
+              <div className="divide-y divide-gray-700/50">
+                {response_data.data.messages.map((message) => (
+                  <MessageRow key={message.id} message={message} user={response_data.data.user} />
+                ))}
+              </div>
+
+              {/* Empty state */}
+              {response_data.data.messages.length === 0 && (
+                <div className="px-4 py-8 text-center">
+                  <p className="text-gray-400">No messages found</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -214,7 +286,7 @@ const MessageRow: React.FC<{ message: UserMessage; user: User }> = ({ message, u
     <div className={rowClasses}>
       {/* Date */}
       <span className="text-gray-400 text-xs font-mono shrink-0 w-32">
-        {formatDate(message.timestamp)}
+        {formatDateTime(message.timestamp)}
       </span>
 
       {/* Subscriber badge */}

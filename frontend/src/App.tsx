@@ -32,6 +32,8 @@ export default function App() {
     channelSearchQuery: "",
     userSearchQuery: "",
     messageSearch: "",
+    additionalFilters: [],
+    paginateByMonth: false,
   });
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);

@@ -38,6 +38,12 @@ pub trait StreamExtensions {
   where
     I: IntoIterator<Item = M>,
     M: Into<muted_vod_segment::ActiveModel>;
+  async fn from_twitch_id(
+    twitch_stream_id: u64,
+    database_connection: &DatabaseConnection,
+  ) -> Result<Option<Self>, DbErr>
+  where
+    Self: Sized;
 }
 
 impl StreamExtensions for stream::Model {
@@ -130,6 +136,19 @@ impl StreamExtensions for stream::Model {
       .await?;
 
     Ok(())
+  }
+
+  async fn from_twitch_id(
+    twitch_stream_id: u64,
+    database_connection: &DatabaseConnection,
+  ) -> Result<Option<Self>, DbErr>
+  where
+    Self: Sized,
+  {
+    stream::Entity::find()
+      .filter(stream::Column::TwitchStreamId.eq(twitch_stream_id))
+      .one(database_connection)
+      .await
   }
 }
 

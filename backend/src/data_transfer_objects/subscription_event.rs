@@ -72,7 +72,7 @@ impl SubscriptionEventDto {
       .await?
     else {
       return Err(AppError::FailedToFindStreamByID {
-        stream_id: stream_id as i64,
+        stream_id: stream_id,
       });
     };
 
