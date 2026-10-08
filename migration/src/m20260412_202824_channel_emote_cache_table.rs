@@ -11,12 +11,19 @@ impl MigrationTrait for Migration {
         Table::create()
           .table(ChannelEmoteCache::Table)
           .if_not_exists()
-          .primary_key(
+          .col(
+            ColumnDef::new(ChannelEmoteCache::Id)
+              .integer()
+              .not_null()
+              .primary_key()
+              .auto_increment(),
+          )
+          .index(
             Index::create()
               .col(ChannelEmoteCache::TwitchUserId)
               .col(ChannelEmoteCache::EmoteId),
           )
-          .col(integer(ChannelEmoteCache::TwitchUserId).not_null())
+          .col(integer(ChannelEmoteCache::TwitchUserId).null())
           .col(integer(ChannelEmoteCache::EmoteId).not_null())
           .foreign_key(
             ForeignKey::create()
@@ -47,6 +54,7 @@ impl MigrationTrait for Migration {
 #[derive(Iden)]
 enum ChannelEmoteCache {
   Table,
+  Id,
   TwitchUserId,
   EmoteId,
 }

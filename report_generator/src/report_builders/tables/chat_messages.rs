@@ -84,7 +84,7 @@ async fn calculate_rankings(
     group_user_message_data(messages, database_connection).await?;
   let mut chats_sent =
     replace_ids_with_users(&mut user_message_data.user_messages, database_connection).await?;
-  chats_sent.sort_by(|(_, lhs), (_, rhs)| rhs.all_messages.len().cmp(&lhs.all_messages.len()));
+  chats_sent.sort_by_key(|(_, lhs)| std::cmp::Reverse(lhs.all_messages.len()));
   let mut quality_filtered_chats_sent = build_quality_filtered_chats(&chats_sent);
 
   if let Some(ranking_row_limit) = ranking_row_limit {

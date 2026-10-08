@@ -51,7 +51,7 @@ pub async fn get_streams(
       .await?;
   stream_response
     .streams
-    .sort_by(|lhs, rhs| rhs.id.cmp(&lhs.id));
+    .sort_by_key(|lhs| std::cmp::Reverse(lhs.id));
 
   Ok(axum::Json(PaginatedResponse {
     data: stream_response,

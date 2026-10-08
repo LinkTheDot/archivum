@@ -43,13 +43,4 @@ impl Related<super::stream_message::Entity> for Entity {
   }
 }
 
-impl Related<super::twitch_user::Entity> for Entity {
-  fn to() -> RelationDef {
-    super::channel_emote_cache::Relation::TwitchUser.def()
-  }
-  fn via() -> Option<RelationDef> {
-    Some(super::channel_emote_cache::Relation::Emote.def().rev())
-  }
-}
-
 impl ActiveModelBehavior for ActiveModel {}

@@ -251,7 +251,6 @@ impl EmoteList {
 
         (emote_name.to_string(), emote)
       })
-      // (emote_name.to_string(), emote_id.to_string()))
       .collect();
     let mut emote_lists = vec![];
 
@@ -287,6 +286,14 @@ impl EmoteList {
 
   pub fn get(&self, emote_name: &str) -> Option<&emote::Model> {
     self.emote_list.get(emote_name)
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.emote_list.is_empty()
+  }
+
+  pub fn len(&self) -> usize {
+    self.emote_list.len()
   }
 }
 

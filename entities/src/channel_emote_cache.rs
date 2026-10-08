@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "channel_emote_cache")]
 pub struct Model {
-  #[sea_orm(primary_key, auto_increment = false)]
-  pub twitch_user_id: i32,
-  #[sea_orm(primary_key, auto_increment = false)]
+  #[sea_orm(primary_key)]
+  pub id: i32,
+  pub twitch_user_id: Option<i32>,
   pub emote_id: i32,
 }
 
