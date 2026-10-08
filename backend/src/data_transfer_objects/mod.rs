@@ -2,6 +2,7 @@ pub mod chat_surge;
 pub mod donation_event;
 pub mod follow;
 pub mod gift_sub_recipient;
+pub mod messages_with_user;
 pub mod raid;
 pub mod stream;
 pub mod stream_message;

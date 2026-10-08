@@ -37,6 +37,7 @@ async fn main() {
       std::process::exit(0);
     }
     ChosenReport::AnnualMessages => annual_chats::generate_reports(stream.twitch_user_id).await,
+    ChosenReport::Overall => overall_report::generate_reports(stream.twitch_user_id).await,
   };
 
   match generate_reports_result {
