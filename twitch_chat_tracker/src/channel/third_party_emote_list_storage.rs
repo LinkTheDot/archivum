@@ -38,27 +38,7 @@ impl EmoteListStorage {
 
     let mut third_party_emote_lists_results: Vec<Result<(String, EmoteList), AppError>> =
       stream::iter(channels)
-        .map(|channel| async move {
-          let channel_login = channel.login_name.clone();
-          let cache_channel_identifier = CacheNameIdentifier::TwitchUser(&channel);
-          let emote_list_result = EmoteList::get_list(&channel, database_connection).await;
-          let emote_list = match emote_list_result {
-            Ok(emote_list) => {
-              EmoteCache::update_cache(cache_channel_identifier, &emote_list, database_connection)
-                .await?;
-
-              emote_list
-            }
-            Err(error) => {
-              tracing::error!(
-                "Failed to retrieve emote list for channel {channel:?}, falling back to cached emotes. Error: {error}"
-              );
-              EmoteCache::retrieve_from_cache(cache_channel_identifier, database_connection).await?
-            }
-          };
-
-          Ok::<_, AppError>((channel_login, emote_list))
-        })
+        .map(|channel| Self::fetch_emote_list(channel, database_connection))
         .buffer_unordered(Self::CHANNEL_FETCH_EMOTE_BATCH_LIMIT)
         .collect::<Vec<_>>()
         .await;
@@ -78,6 +58,31 @@ impl EmoteListStorage {
     Ok(Self {
       third_party_emote_lists,
     })
+  }
+
+  async fn fetch_emote_list(
+    channel: twitch_user::Model,
+    database_connection: &DatabaseConnection,
+  ) -> Result<(String, EmoteList), AppError> {
+    let channel_login = channel.login_name.clone();
+    let cache_channel_identifier = CacheNameIdentifier::TwitchUser(&channel);
+    let emote_list_result = EmoteList::get_list(&channel, database_connection).await;
+    let emote_list = match emote_list_result {
+      Ok(emote_list) => {
+        EmoteCache::update_cache(cache_channel_identifier, &emote_list, database_connection)
+          .await?;
+
+        emote_list
+      }
+      Err(error) => {
+        tracing::error!(
+                "Failed to retrieve emote list for channel {channel:?}, falling back to cached emotes. Error: {error}"
+              );
+        EmoteCache::retrieve_from_cache(cache_channel_identifier, database_connection).await?
+      }
+    };
+
+    Ok::<_, AppError>((channel_login, emote_list))
   }
 
   async fn get_global_emote_list(

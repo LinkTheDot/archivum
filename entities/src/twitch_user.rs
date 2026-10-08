@@ -66,15 +66,6 @@ impl Related<super::twitch_user_unknown_user_association::Entity> for Entity {
   }
 }
 
-impl Related<super::emote::Entity> for Entity {
-  fn to() -> RelationDef {
-    super::channel_emote_cache::Relation::Emote.def()
-  }
-  fn via() -> Option<RelationDef> {
-    Some(super::channel_emote_cache::Relation::TwitchUser.def().rev())
-  }
-}
-
 impl Related<super::unknown_user::Entity> for Entity {
   fn to() -> RelationDef {
     super::twitch_user_unknown_user_association::Relation::UnknownUser.def()
